@@ -1,0 +1,2783 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RePlate — Hospital Food Waste Tracking</title>
+<style>
+
+/* ══════════════════════════════════
+   RESET & BASE
+══════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:#F2F0EA;color:#1A1814;font-size:14px;line-height:1.5;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select,textarea{font-family:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#2A6348!important;box-shadow:0 0 0 3px rgba(42,99,72,.12)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#D0CAC2;border-radius:4px}
+
+/* ══════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{transform:translateY(110%)}to{transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.anim-fadeup{animation:fadeUp .25s ease forwards}
+.anim-shake{animation:shake .35s ease}
+
+/* ══════════════════════════════════
+   AUTH SCREENS
+══════════════════════════════════ */
+.auth-screen{
+  display:none;min-height:100vh;
+  align-items:center;justify-content:center;
+  padding:24px;background:#F2F0EA;
+  flex-direction:column;
+}
+.auth-box{
+  background:#fff;border:1px solid #DDD8CE;
+  border-radius:16px;padding:30px 26px;
+  width:100%;max-width:380px;
+  box-shadow:0 8px 32px rgba(26,24,20,.09);
+}
+.auth-logo{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:8px}
+.auth-logo-icon{width:42px;height:42px;background:#2A6348;border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(42,99,72,.28)}
+.pw-wrap{position:relative}
+.pw-wrap .fc{padding-right:40px}
+.pw-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);cursor:pointer;color:#78746A;font-size:15px;user-select:none}
+.err-box{background:#FBEAE8;border:1px solid #B83025;border-radius:8px;padding:9px 12px;font-size:11px;color:#B83025;margin-bottom:12px;display:none}
+.err-box.show{display:block}
+.divider{height:1px;background:#EDEBE5;margin:16px 0}
+.link-btn{color:#2A6348;font-weight:600;cursor:pointer;font-size:12px}
+.link-btn:hover{text-decoration:underline}
+.setup-step{display:none}.setup-step.active{display:block}
+.setup-progress{display:flex;gap:6px;margin-bottom:24px}
+.sp-dot{flex:1;height:4px;border-radius:2px;background:#DFD9D0;transition:background .3s}
+.sp-dot.done{background:#2A6348}
+.strength-bar{height:3px;border-radius:2px;transition:background .3s}
+
+/* ══════════════════════════════════
+   APP LAYOUT — DESKTOP SIDEBAR
+══════════════════════════════════ */
+#app-screen{
+  display:none;          /* shown by JS */
+  height:100vh;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* TOP BAR */
+#topbar{
+  height:56px;
+  background:#fff;
+  border-bottom:1px solid #DDD8CE;
+  padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  z-index:100;
+}
+.tb-left{display:flex;align-items:center;gap:12px}
+.tb-menu-btn{background:none;border:none;cursor:pointer;color:#78746A;padding:5px;border-radius:6px;display:flex}
+.tb-menu-btn:hover{background:#F0EDE8}
+.tb-logo{width:28px;height:28px;background:#2A6348;border-radius:7px;display:flex;align-items:center;justify-content:center}
+.tb-title{font-weight:700;font-size:15px;color:#1A1814}
+.tb-badge{font-size:9px;color:#78746A;background:#EDEBE5;padding:2px 7px;border-radius:4px;font-family:monospace}
+.tb-crumb{font-size:12px;color:#B0A89E;display:flex;align-items:center;gap:5px}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tb-icon{background:none;border:none;cursor:pointer;color:#78746A;padding:6px;border-radius:6px;display:flex;position:relative}
+.tb-icon:hover{background:#F0EDE8;color:#1A1814}
+.tb-dot{width:7px;height:7px;background:#B83025;border-radius:50%;position:absolute;top:3px;right:3px}
+.tb-avatar{width:32px;height:32px;border-radius:50%;background:#E4F2EB;border:2px solid #2A6348;font-size:11px;font-weight:700;color:#2A6348;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+
+/* BODY = sidebar + content */
+#app-body{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+  height:calc(100vh - 56px);
+}
+
+/* ── LEFT SIDEBAR ── */
+#sidebar{
+  width:230px;
+  background:#fff;
+  border-right:1px solid #E4DED6;
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  transition:width .2s ease;
+}
+#sidebar.collapsed{width:56px}
+
+.sb-header{
+  padding:16px 14px 12px;
+  border-bottom:1px solid #F0EDE8;
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  flex-shrink:0;
+}
+.sb-hosp{font-size:12px;font-weight:700;color:#1A1814;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sidebar.collapsed .sb-hosp{display:none}
+.sb-chevron{background:none;border:none;cursor:pointer;color:#B0A89E;padding:3px;border-radius:4px;display:flex;flex-shrink:0}
+.sb-chevron:hover{background:#F0EDE8;color:#1A1814}
+#sidebar.collapsed .sb-chevron svg{transform:scaleX(-1)}
+
+.sb-section{font-size:9px;font-weight:700;color:#B0A89E;letter-spacing:1.1px;padding:14px 14px 4px;text-transform:uppercase;white-space:nowrap}
+#sidebar.collapsed .sb-section{display:none}
+
+.sb-divider{height:1px;background:#F0EDE8;margin:6px 10px}
+
+/* NAV ITEMS */
+.ni{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  width:100%;border:none;background:none;
+  color:#78746A;font-size:13px;font-weight:500;
+  cursor:pointer;text-align:left;
+  border-left:3px solid transparent;
+  white-space:nowrap;overflow:hidden;
+  transition:background .12s,color .12s;
+}
+.ni:hover{background:#F7F5F0;color:#1A1814}
+.ni.active{background:#E8F4EE;color:#2A6348;font-weight:600;border-left-color:#2A6348}
+.ni svg{width:18px;height:18px;flex-shrink:0}
+.ni span{font-size:13px}
+#sidebar.collapsed .ni{padding:10px;justify-content:center;border-left:none;border-right:3px solid transparent}
+#sidebar.collapsed .ni.active{border-right-color:#2A6348}
+#sidebar.collapsed .ni span{display:none}
+.ni-danger{color:#B83025!important}
+.ni-danger:hover{background:#FBEAE8!important}
+
+/* Sidebar footer */
+.sb-footer{
+  margin-top:auto;
+  padding:12px 12px;
+  border-top:1px solid #F0EDE8;
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:background .12s;
+  flex-shrink:0;
+}
+.sb-footer:hover{background:#F7F5F0}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:#E4F2EB;border:2px solid #2A6348;font-size:11px;font-weight:700;color:#2A6348;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-user-name{font-size:12px;font-weight:600;color:#1A1814;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-role{font-size:10px;color:#78746A;margin-top:1px}
+#sidebar.collapsed .sb-footer{padding:12px;justify-content:center}
+#sidebar.collapsed .sb-footer .sb-user-info{display:none}
+
+/* ── MAIN CONTENT ── */
+#content{
+  flex:1;
+  overflow-y:auto;
+  padding:28px 36px;
+  background:#F2F0EA;
+}
+.screen{display:none}.screen.active{display:block}
+
+/* SYNC BAR */
+#sync-bar{background:#E4F2EB;border-bottom:1px solid #c3e0d0;padding:3px 20px;font-size:10px;color:#2A6348;font-weight:600;display:none;flex-shrink:0}
+#sync-bar.show{display:block}
+#sync-bar.warn{background:#FEF6E4;border-color:#e8c97a;color:#B07D10}
+
+/* Mobile: sidebar drawer replaces bottom nav */
+#bnav{display:none!important}
+@media(max-width:768px){
+  #sidebar{
+    position:fixed;top:56px;left:0;bottom:0;
+    z-index:150;width:220px;
+    transform:translateX(-100%);
+    transition:transform .22s ease;
+    box-shadow:4px 0 20px rgba(0,0,0,.12);
+  }
+  #sidebar.mobile-open{transform:translateX(0)}
+  #sidebar.collapsed:not(.mobile-open){transform:translateX(-100%)}
+  #content{padding:16px 14px 28px}
+  #mobile-overlay{
+    display:none;position:fixed;inset:0;top:56px;
+    background:rgba(26,24,20,.45);z-index:140;
+  }
+  #mobile-overlay.show{display:block}
+}
+
+/* ══════════════════════════════════
+   LOADING
+══════════════════════════════════ */
+#loading-screen{position:fixed;inset:0;background:#F2F0EA;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px}
+.spinner{width:34px;height:34px;border:3px solid #DDD8CE;border-top-color:#2A6348;border-radius:50%;animation:spin .9s linear infinite}
+
+/* ══════════════════════════════════
+   COMPONENTS
+══════════════════════════════════ */
+.card{background:#fff;border:1px solid #DDD8CE;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 1px 8px rgba(26,24,20,.04)}
+.card-hd{font-size:10px;font-weight:700;color:#78746A;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+
+/* Stats grid */
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.sbox{background:#EDEBE5;border-radius:9px;padding:14px 12px;text-align:center}
+.sbox .n{font-size:22px;font-weight:700;letter-spacing:-1px}
+.sbox .l{font-size:9px;color:#78746A;margin-top:3px;line-height:1.3}
+.c-green{color:#2A6348}.c-orange{color:#C4672F}.c-red{color:#B83025}.c-blue{color:#2563EB}.c-muted{color:#1A1814}
+
+/* Tags */
+.tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.tag-green{background:#E4F2EB;color:#2A6348}
+.tag-orange{background:#FCEEE4;color:#C4672F}
+.tag-red{background:#FBEAE8;color:#B83025}
+.tag-yellow{background:#FEF6E4;color:#B07D10}
+.tag-gray{background:#EDEBE5;color:#78746A}
+.tag-blue{background:#EFF6FF;color:#2563EB}
+.tag-purple{background:#F5F3FF;color:#6D28D9}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;font-size:13px;font-weight:600;border-radius:8px;transition:all .15s;border:none}
+.btn:active{transform:scale(.97)}
+.btn-p{background:#2A6348;color:#fff}.btn-p:hover{background:#225539}
+.btn-o{background:transparent;color:#1A1814;border:1.5px solid #DDD8CE}.btn-o:hover{border-color:#2A6348;color:#2A6348}
+.btn-danger{background:#B83025;color:#fff}.btn-danger:hover{background:#9e2820}
+.btn-ghost{background:transparent;color:#78746A;padding:5px 9px;font-size:11px;border-radius:6px}.btn-ghost:hover{background:#EDEBE5}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-full{width:100%}
+.btn-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Forms */
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:11px;font-weight:600;color:#78746A;margin-bottom:5px}
+.fc{width:100%;padding:9px 11px;border:1.5px solid #DDD8CE;border-radius:8px;font-size:12px;background:#fff;color:#1A1814;transition:border-color .15s}
+.fc.readonly{background:#EDEBE5;color:#78746A}
+.fc.error{border-color:#B83025!important}
+.fc-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fc-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+select.fc{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2378746A' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+textarea.fc{resize:none}
+
+/* Alerts */
+.alert{border-radius:7px;padding:9px 12px;margin-bottom:7px;font-size:11px;line-height:1.5;display:flex;gap:8px}
+.alert-red{background:#FBEAE8;border-left:3px solid #B83025;color:#B83025}
+.alert-yellow{background:#FEF6E4;border-left:3px solid #B07D10;color:#B07D10}
+.alert-green{background:#E4F2EB;border-left:3px solid #2A6348;color:#2A6348}
+.alert-blue{background:#EFF6FF;border-left:3px solid #2563EB;color:#2563EB}
+
+/* List items */
+.li{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #DFD9D0}
+.li:last-child{border-bottom:none}
+.li-l{display:flex;align-items:center;gap:9px;min-width:0}
+.li-ic{width:34px;height:34px;border-radius:8px;background:#EDEBE5;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.li-title{font-size:12px;font-weight:600}
+.li-sub{font-size:10px;color:#78746A;margin-top:1px}
+
+/* Bar chart */
+.barchart{display:flex;align-items:flex-end;gap:5px;height:70px;margin:8px 0 4px}
+.bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bc-bar{width:100%;border-radius:3px 3px 0 0;transition:height .4s;cursor:default}
+.bc-bar:hover{opacity:1!important}
+.bc-lbl{font-size:8px;color:#78746A;font-family:monospace}
+
+/* Steps */
+.steps{display:flex;align-items:center;margin-bottom:20px}
+.step-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:all .2s}
+.step-dot.done{background:#2A6348;color:#fff}
+.step-dot.active{background:#2A6348;color:#fff;box-shadow:0 0 0 4px #E4F2EB}
+.step-dot.pending{background:#DFD9D0;color:#78746A}
+.step-line{flex:1;height:2px;transition:background .3s}
+.step-line.done{background:#2A6348}
+.step-line.pending{background:#DFD9D0}
+
+/* Toggle switch */
+.sw{width:38px;height:21px;border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.sw-thumb{width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* Table */
+.dt{width:100%;border-collapse:collapse;font-size:11px}
+.dt th{text-align:left;padding:8px 10px;background:#EDEBE5;color:#78746A;font-weight:700;font-size:10px;cursor:pointer;user-select:none;white-space:nowrap}
+.dt th:hover{background:#DFD9D0}
+.dt td{padding:9px 10px;border-bottom:1px solid #DFD9D0}
+.dt tr:hover td{background:#F7F5F0}
+
+/* Modals */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,24,20,.5);z-index:300;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:18px 18px 0 0;padding:24px 20px 36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-close{width:28px;height:28px;border-radius:50%;background:#EDEBE5;font-size:14px;color:#78746A;cursor:pointer;border:none}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A1814;color:#fff;padding:9px 18px;border-radius:22px;font-size:12px;font-weight:600;z-index:999;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+#toast.show{opacity:1}
+
+/* Notification panel */
+.notif-panel{position:fixed;top:56px;right:12px;width:300px;background:#fff;border:1px solid #DDD8CE;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:250;display:none;max-height:70vh;overflow-y:auto}
+.notif-panel.show{display:block}
+.np-hd{padding:12px 16px;font-size:12px;font-weight:700;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between}
+.np-item{padding:11px 16px;border-bottom:1px solid #F0EDE8;display:flex;gap:10px}
+.np-item:last-child{border-bottom:none}
+.np-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.np-text{font-size:11px;line-height:1.5}
+.np-time{font-size:10px;color:#78746A;margin-top:2px}
+
+/* Live dot */
+.live-dot{width:6px;height:6px;background:#2A6348;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 2s infinite}
+
+/* Desktop 2-column dashboard grid */
+@media(min-width:900px){
+  .dash-grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+  .dash-main{min-width:0}
+  .dash-side{min-width:0}
+}
+
+/* Grid helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.grid-4{grid-template-columns:1fr 1fr}.dash-grid{display:block}}
+@media(max-width:600px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.fc-2,.fc-3{grid-template-columns:1fr}}
+
+
+/* ══ RTL / Arabic direction support ══ */
+[dir="rtl"] { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+[dir="rtl"] #sidebar { border-right: none; border-left: 1px solid #E4DED6; }
+[dir="rtl"] #sidebar.collapsed { width: 56px; }
+[dir="rtl"] .ni { border-left: none; border-right: 3px solid transparent; text-align: right; }
+[dir="rtl"] .ni.active { border-right-color: #2A6348; border-left-color: transparent; }
+[dir="rtl"] #sidebar.collapsed .ni.active { border-left-color: #2A6348; border-right-color: transparent; }
+[dir="rtl"] .tb-icon .tb-dot { right: auto; left: 3px; }
+[dir="rtl"] .alert { border-left: none; border-right: 3px solid; }
+[dir="rtl"] .sb-chevron svg { transform: scaleX(-1); }
+[dir="rtl"] #sidebar.collapsed .sb-chevron svg { transform: scaleX(1); }
+[dir="rtl"] .pw-eye { right: auto; left: 11px; }
+[dir="rtl"] .pw-wrap .fc { padding-right: 11px; padding-left: 40px; }
+[dir="rtl"] select.fc { background-position: left 10px center; padding-right: 11px; padding-left: 28px; }
+[dir="rtl"] .tb-left { flex-direction: row-reverse; }
+[dir="rtl"] .tb-right { flex-direction: row-reverse; }
+[dir="rtl"] .modal-hd { flex-direction: row-reverse; }
+[dir="rtl"] .sb-footer { flex-direction: row-reverse; }
+[dir="rtl"] .li { flex-direction: row-reverse; }
+[dir="rtl"] .li-l { flex-direction: row; }
+[dir="rtl"] .btn-2col { direction: rtl; }
+[dir="rtl"] .fc-2, [dir="rtl"] .fc-3 { direction: rtl; }
+[dir="rtl"] .stat-row, [dir="rtl"] .stat-row-4 { direction: rtl; }
+[dir="rtl"] .sb-section { text-align: right; }
+[dir="rtl"] .card-hd { text-align: right; }
+
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div style="width:48px;height:48px;background:#2A6348;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(42,99,72,.3)">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="white"><path d="M20 3H4v10c0 3.3 2.7 6 6 6h4c3.3 0 6-2.7 6-6V3zm-2 10c0 2.2-1.8 4-4 4h-4c-2.2 0-4-1.8-4-4V5h12v8z"/><path d="M12 19v2M8 21h8"/></svg>
+  </div>
+  <div class="spinner"></div>
+  <div style="font-size:12px;color:#78746A;font-weight:500">Loading RePlate…</div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     AUTH SCREENS
+══════════════════════════════════ -->
+<!-- ══ FIRST-TIME SETUP ══ -->
+<div id="setup-screen" class="auth-screen" >
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M20 3H4v10c0 3.3 2.7 6 6 6h4c3.3 0 6-2.7 6-6V3zm-2 10c0 2.2-1.8 4-4 4h-4c-2.2 0-4-1.8-4-4V5h12v8z"/><path d="M12 19v2M8 21h8"/></svg></div>
+      <span style="font-size:22px;font-weight:700;letter-spacing:-.4px">RePlate</span>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#78746A;margin-bottom:20px">First-time setup — Create your admin account</p>
+
+    <div class="setup-progress">
+      <div class="sp-dot done" id="sp1"></div>
+      <div class="sp-dot" id="sp2"></div>
+      <div class="sp-dot" id="sp3"></div>
+    </div>
+
+    <!-- Step 1: Hospital info -->
+    <div class="setup-step active" id="setup-s1">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">🏥 Hospital Information</div>
+      <p style="font-size:11px;color:#78746A;margin-bottom:16px">This will appear across the dashboard</p>
+      <div class="fg"><label class="fl">Hospital Name <span style="color:#B83025">*</span></label>
+        <input class="fc" id="s-hosp-name" placeholder="e.g. Dallah Hospital" maxlength="60"></div>
+      <div class="fg"><label class="fl">City / Location</label>
+        <input class="fc" id="s-hosp-city" placeholder="e.g. Riyadh, Saudi Arabia"></div>
+      <div class="fg"><label class="fl">System Contact Email <span style="color:#B83025">*</span></label>
+        <input class="fc" id="s-hosp-email" type="email" placeholder="admin@hospital.sa"></div>
+      <div class="err-box" id="s1-err"></div>
+      <button class="btn btn-p btn-full" onclick="setupStep1()">Continue →</button>
+    </div>
+
+    <!-- Step 2: Admin account -->
+    <div class="setup-step" id="setup-s2">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">🔐 Admin Account</div>
+      <p style="font-size:11px;color:#78746A;margin-bottom:16px">You will use these credentials to manage the system</p>
+      <div class="fg"><label class="fl">Full Name <span style="color:#B83025">*</span></label>
+        <input class="fc" id="s-admin-name" placeholder="e.g. Yasser Al-Hassan"></div>
+      <div class="fg"><label class="fl">Admin Email <span style="color:#B83025">*</span></label>
+        <input class="fc" id="s-admin-email" type="email" placeholder="admin@hospital.sa"></div>
+      <div class="fg"><label class="fl">Password <span style="color:#B83025">*</span></label>
+        <div class="pw-wrap"><input class="fc" id="s-admin-pw" type="password" placeholder="Min. 8 characters" oninput="checkStrength(this.value,'s-strength')">
+        <span class="pw-eye" onclick="togglePw('s-admin-pw',this)">👁</span></div>
+        <div style="display:flex;gap:4px;margin-top:5px" id="s-strength-bars">
+          <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="sb1"></div>
+          <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="sb2"></div>
+          <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="sb3"></div>
+          <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="sb4"></div>
+        </div>
+        <div style="font-size:10px;color:#78746A;margin-top:3px" id="s-strength-lbl">Enter a password</div>
+      </div>
+      <div class="fg"><label class="fl">Confirm Password <span style="color:#B83025">*</span></label>
+        <div class="pw-wrap"><input class="fc" id="s-admin-pw2" type="password" placeholder="Re-enter password">
+        <span class="pw-eye" onclick="togglePw('s-admin-pw2',this)">👁</span></div>
+      </div>
+      <div class="err-box" id="s2-err"></div>
+      <div class="btn-2col">
+        <button class="btn btn-o btn-full" onclick="goSetupStep(1)">← Back</button>
+        <button class="btn btn-p btn-full" onclick="setupStep2()">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Confirm -->
+    <div class="setup-step" id="setup-s3">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">✅ Ready to Launch</div>
+      <p style="font-size:11px;color:#78746A;margin-bottom:16px">Review your setup before activating</p>
+      <div style="background:#EDEBE5;border-radius:9px;padding:14px;margin-bottom:16px" id="setup-review"></div>
+      <div class="alert alert-blue" style="margin-bottom:14px">
+        <span>ℹ️</span><div>After setup, go to <strong>Admin → Users</strong> to add staff, manager, and partner accounts with their own emails and passwords.</div>
+      </div>
+      <div class="err-box" id="s3-err"></div>
+      <div class="btn-2col">
+        <button class="btn btn-o btn-full" onclick="goSetupStep(2)">← Back</button>
+        <button class="btn btn-p btn-full" onclick="finishSetup()">🚀 Launch RePlate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen" class="auth-screen" >
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M20 3H4v10c0 3.3 2.7 6 6 6h4c3.3 0 6-2.7 6-6V3zm-2 10c0 2.2-1.8 4-4 4h-4c-2.2 0-4-1.8-4-4V5h12v8z"/><path d="M12 19v2M8 21h8"/></svg></div>
+      <span style="font-size:22px;font-weight:700;letter-spacing:-.4px">RePlate</span>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#78746A;margin-bottom:22px" id="login-hosp-name">Sign in to your account</p>
+
+    <div class="fg"><label class="fl">Email</label>
+      <input class="fc" id="l-email" type="email" placeholder="your@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()"></div>
+    <div class="fg"><label class="fl">Password</label>
+      <div class="pw-wrap">
+        <input class="fc" id="l-pw" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <span class="pw-eye" onclick="togglePw('l-pw',this)">👁</span>
+      </div>
+    </div>
+
+    <div class="err-box" id="l-err"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#78746A;cursor:pointer">
+        <input type="checkbox" id="l-remember" style="width:14px;height:14px;accent-color:#2A6348"> Remember me
+      </label>
+      <span class="link-btn" onclick="showForgot()">Forgot password?</span>
+    </div>
+
+    <button class="btn btn-p btn-full" id="l-btn" onclick="doLogin()">Sign In</button>
+
+    <div class="divider"></div>
+    <div style="text-align:center;font-size:11px;color:#78746A">
+      New user? Contact your <strong>system administrator</strong> to create your account.
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <span class="link-btn" onclick="showScreen('register')" style="font-size:12px">
+        Don't have an account? <strong style="color:#2A6348">Request Access →</strong>
+      </span>
+    </div>
+
+  </div>
+  <div style="margin-top:16px;font-size:10px;color:#B0A89E;font-family:monospace;text-align:center">SE365 · Prince Sultan University · RePlate</div>
+</div>
+
+<!-- ══ FORGOT PASSWORD ══ -->
+<div id="forgot-screen" class="auth-screen" >
+  <div class="auth-box">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">🔑 Reset Password</div>
+    <p style="font-size:12px;color:#78746A;margin-bottom:20px">Enter your email — the admin will reset your password manually.</p>
+    <div class="fg"><label class="fl">Your Email</label>
+      <input class="fc" id="fp-email" type="email" placeholder="your@email.com"></div>
+    <div id="fp-msg" style="display:none;margin-bottom:12px"></div>
+    <button class="btn btn-p btn-full" onclick="submitForgot()">Send Request</button>
+    <p style="text-align:center;font-size:11px;color:#78746A;margin-top:14px;cursor:pointer" onclick="showLogin()">← Back to login</p>
+  </div>
+</div>
+<!-- ══════════════════════════════════
+     MAIN APP
+══════════════════════════════════ -->
+<div id="app-screen">
+  <div id="sync-bar"></div>
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="tb-left">
+      <button class="tb-menu-btn" onclick="toggleSidebar()" title="Toggle menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="tb-logo">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M20 3H4v10c0 3.3 2.7 6 6 6h4c3.3 0 6-2.7 6-6V3zm-2 10c0 2.2-1.8 4-4 4h-4c-2.2 0-4-1.8-4-4V5h12v8z"/></svg>
+      </div>
+      <span class="tb-title">RePlate</span>
+      <span class="tb-badge" id="tb-role"></span>
+      <span class="tb-crumb" id="tb-crumb"></span>
+    </div>
+    <div class="tb-right">
+      <button class="tb-icon" id="refresh-btn" onclick="refreshFromCloud()" title="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="tb-icon" onclick="openNotifPanel()" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="tb-dot" id="notif-dot" style="display:none"></div>
+      </button>
+      <button class="tb-icon" onclick="openModal('overlay-settings')" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="tb-avatar" id="tb-avatar" onclick="openModal('overlay-profile')">—</button>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div id="app-body">
+
+    <!-- LEFT SIDEBAR -->
+    <nav id="sidebar">
+      <div class="sb-header">
+        <span class="sb-hosp" id="sb-hosp">RePlate</span>
+        <button class="sb-chevron" onclick="toggleSidebar()" title="Collapse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+
+      <div id="sidebar-nav">
+        <!-- Built dynamically by JS -->
+      </div>
+
+      <!-- User at bottom -->
+      <div class="sb-footer" onclick="openModal('overlay-profile')">
+        <div class="sb-avatar" id="sb-avatar">—</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sb-name">—</div>
+          <div class="sb-user-role" id="sb-role">—</div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div id="content">
+      <div class="screen active" id="s-dashboard"></div>
+      <div class="screen" id="s-log"></div>
+      <div class="screen" id="s-reports"></div>
+      <div class="screen" id="s-partner"></div>
+      <div class="screen" id="s-admin"></div>
+    </div>
+
+  </div><!-- end app-body -->
+
+  <!-- Mobile sidebar overlay backdrop -->
+  <div id="mobile-overlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- Mobile bottom nav (hidden) -->
+  <nav id="bnav"></nav>
+
+</div><!-- end app-screen -->
+
+<!-- ══ MODALS ══ -->
+
+<!-- Profile / Account -->
+<div class="overlay" id="overlay-profile">
+  <div class="modal">
+    <div class="modal-hd"><h3 style="font-size:16px;font-weight:700">My Account</h3><button class="modal-close" onclick="closeModal('overlay-profile')">✕</button></div>
+    <div id="profile-content"></div>
+  </div>
+</div>
+
+<!-- Change password -->
+<div class="overlay" id="overlay-chpw">
+  <div class="modal">
+    <div class="modal-hd"><h3 style="font-size:16px;font-weight:700">Change Password</h3><button class="modal-close" onclick="closeModal('overlay-chpw')">✕</button></div>
+    <div class="fg"><label class="fl">Current Password</label>
+      <div class="pw-wrap"><input class="fc" id="cp-old" type="password" placeholder="••••••••"><span class="pw-eye" onclick="togglePw('cp-old',this)">👁</span></div></div>
+    <div class="fg"><label class="fl">New Password</label>
+      <div class="pw-wrap"><input class="fc" id="cp-new" type="password" placeholder="Min. 8 characters" oninput="checkStrength(this.value,'cp')"><span class="pw-eye" onclick="togglePw('cp-new',this)">👁</span></div>
+      <div style="display:flex;gap:4px;margin-top:5px" id="cp-bars">
+        <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="cp-b1"></div>
+        <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="cp-b2"></div>
+        <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="cp-b3"></div>
+        <div style="flex:1;height:3px;border-radius:2px;background:#DFD9D0" id="cp-b4"></div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Confirm New Password</label>
+      <div class="pw-wrap"><input class="fc" id="cp-new2" type="password" placeholder="Re-enter new password"><span class="pw-eye" onclick="togglePw('cp-new2',this)">👁</span></div></div>
+    <div class="err-box" id="cp-err"></div>
+    <button class="btn btn-p btn-full" onclick="changePassword()">Update Password</button>
+  </div>
+</div>
+
+<!-- Pickup request -->
+<div class="overlay" id="overlay-pickup">
+  <div class="modal">
+    <div class="modal-hd"><h3 style="font-size:16px;font-weight:700">Create Pickup Request</h3><button class="modal-close" onclick="closeModal('overlay-pickup')">✕</button></div>
+    <div class="fg"><label class="fl">Waste Partner</label>
+      <select class="fc" id="pu-partner" id="pu-partner">${(DB?.partners?.filter(p=>p.status==='Active')||[]).map(p=>`<option>${p.name}</option>`).join('')||'<option>No partners added</option>'}</select></div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Estimated kg <span style="color:#B83025">*</span></label><input class="fc" id="pu-kg" type="number" placeholder="60" min="1"></div>
+      <div class="fg"><label class="fl">Preferred Date</label><input class="fc" id="pu-date" type="date"></div>
+    </div>
+    <div class="fg"><label class="fl">Waste Type</label>
+      <select class="fc" id="pu-type"><option>Mixed Organic</option><option>Meat / Protein</option><option>Compostable</option><option>Recyclable Packaging</option></select></div>
+    <div class="fg"><label class="fl">Notes</label><input class="fc" id="pu-notes" type="text" placeholder="e.g. Include morning prep from Kitchen A"></div>
+    <button class="btn btn-p btn-full" onclick="submitPickup()">Send Request to Partner</button>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="overlay" id="overlay-settings">
+  <div class="modal" style="border-radius:16px;max-width:560px;margin:auto">
+    <div class="modal-hd"><h3 id="m-settings-title" style="font-size:16px;font-weight:700">${t('sysSettings')||'⚙️ System Settings'}</h3><button class="modal-close" onclick="closeModal('overlay-settings')">✕</button></div>
+    <div id="settings-content"></div>
+  </div>
+</div>
+
+<!-- Partner management modal -->
+<div class="overlay" id="overlay-partner-form">
+  <div class="modal">
+    <div class="modal-hd"><h3 id="pf-title" style="font-size:16px;font-weight:700">Add Partner</h3><button class="modal-close" onclick="closeModal('overlay-partner-form')">✕</button></div>
+    <input type="hidden" id="pf-id">
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Company Name <span style="color:#B83025">*</span></label><input class="fc" id="pf-name" placeholder="e.g. GreenCo"></div>
+      <div class="fg"><label class="fl">Contact Person <span style="color:#B83025">*</span></label><input class="fc" id="pf-contact" placeholder="e.g. Ahmed Al-Saud"></div>
+    </div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Phone <span style="color:#B83025">*</span></label><input class="fc" id="pf-phone" placeholder="e.g. +966 50 123 4567" maxlength="18" oninput="this.value=this.value.replace(/[^0-9+\-\s]/g,'')"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fc" id="pf-email" type="email" placeholder="contact@greenco.sa"></div>
+    </div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">City</label><input class="fc" id="pf-city" placeholder="e.g. Riyadh"></div>
+      <div class="fg"><label class="fl">Address</label><input class="fc" id="pf-address" placeholder="e.g. Industrial Area, Zone 3"></div>
+    </div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">CR Number</label><input class="fc" id="pf-cr" placeholder="e.g. 1234567890" maxlength="10"></div>
+      <div class="fg"><label class="fl">IBAN</label><input class="fc" id="pf-iban" placeholder="e.g. SA00 0000 0000 0000 0000 0000"></div>
+    </div>
+    <div class="fg"><label class="fl">Waste Types Handled</label><input class="fc" id="pf-types" placeholder="e.g. Organic, Compostable, Mixed"></div>
+    <div class="fg"><label class="fl">Status</label>
+      <select class="fc" id="pf-status"><option>Active</option><option>Inactive</option></select></div>
+    <div class="err-box" id="pf-err"></div>
+    <button class="btn btn-p btn-full" onclick="savePartner()">Save Partner</button>
+  </div>
+</div>
+
+<!-- User management modal -->
+<div class="overlay" id="overlay-user">
+  <div class="modal">
+    <div class="modal-hd"><h3 id="um-title" style="font-size:16px;font-weight:700">Add User</h3><button class="modal-close" onclick="closeModal('overlay-user')">✕</button></div>
+    <input type="hidden" id="um-id">
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Full Name <span style="color:#B83025">*</span></label><input class="fc" id="um-name" placeholder="e.g. Sara Al-Nasser"></div>
+      <div class="fg"><label class="fl">Email <span style="color:#B83025">*</span></label><input class="fc" id="um-email" type="email" placeholder="sara@hospital.sa"></div>
+    </div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Role <span style="color:#B83025">*</span></label>
+        <select class="fc" id="um-role"><option>Staff</option><option>Manager</option><option>Partner</option><option>Admin</option></select></div>
+      <div class="fg"><label class="fl">Department</label><input class="fc" id="um-dept" placeholder="Kitchen A"></div>
+      <div class="fg"><label class="fl">Phone Number</label><input class="fc" id="um-phone" type="tel" placeholder="+966 50 123 4567" maxlength="18"></div>
+    </div>
+    <div class="fg" id="um-pw-section"><label class="fl">Password <span style="color:#B83025">*</span></label>
+      <div class="pw-wrap"><input class="fc" id="um-pw" type="password" placeholder="Min. 8 characters"><span class="pw-eye" onclick="togglePw('um-pw',this)">👁</span></div>
+      <div style="font-size:10px;color:#78746A;margin-top:4px">User can change this after first login</div>
+    </div>
+    <div class="fg"><label class="fl">Status</label>
+      <select class="fc" id="um-status"><option>Active</option><option>Inactive</option></select></div>
+    <div class="err-box" id="um-err"></div>
+    <button class="btn btn-p btn-full" onclick="saveUser()">Save User</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="notif-panel" id="notif-panel">
+  <div class="np-hd">
+    <span>🔔 Notifications</span>
+    <span style="font-size:10px;color:#78746A;cursor:pointer" onclick="document.getElementById('notif-panel').classList.remove('show')">Close</span>
+  </div>
+  <div id="notif-list"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  INTERNATIONALISATION (EN / AR)
+// ══════════════════════════════════════════════════════
+
+const I18N = {
+  en: {
+    dir: "ltr",
+    loading: "Loading RePlate...",
+    dashboard: "Dashboard",
+    log: "Log Waste",
+    reports: t('reportsTitle'),
+    partner: "Partner",
+    admin: "Admin",
+    settings: "Settings",
+    profile: "My Profile",
+    signOut: "Sign Out",
+    welcome: "Welcome",
+    kgToday: "kg Today",
+    entToday: "Entries Today",
+    pendPU: "Pending Pickups",
+    recent: t('recent'),
+    lang: "Language",
+    currency: "Currency",
+    hospInfo: "Hospital Info",
+    saveSettings: "Save Settings",
+    notifs: "Notifications",
+    myAcc: "My Account",
+    chPw: "Change Password",
+    curPw: "Current Password",
+    newPw: "New Password",
+    confPw: "Confirm Password",
+    updPw: "Update Password",
+    createPU: "Create Pickup Request",
+    estKg: "Estimated kg",
+    prefDate: "Preferred Date",
+    wasteType: "Waste Type",
+    notes: "Notes",
+    sendPU: "Send Request to Partner",
+    sysSettings: "System Settings",
+    noEntriesYet: "No entries logged yet.",
+    logWaste: "＋ Log Waste",
+    requestPickup: "🚛 Request Pickup",
+    defaultCostPerKg: "Default cost per kg",
+    realTimeAlerts: "Real-time alerts",
+    autoNotifyPartners: "Auto-notify partners",
+    profileTitle: "My Account",
+    settingsSaved: "✅ Settings saved",
+    invalidCredentials: "❌ Invalid email or password",
+    navMain: "Main",
+    navAdminSection: "Admin",
+    refresh: "Refresh",
+    notifications: "Notifications",
+    logWasteTitle: "Log Waste Entry",
+    logStep1: "Meal Info",
+    logStep2: "Weight",
+    logStep3: "Confirm",
+    mealType: "Meal Type",
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    dinner: "Dinner",
+    snack: "Snack",
+    other: "Other",
+    department: "Department",
+    category: "Waste Category",
+    catPlate: "Plate Waste",
+    catPrep: "Prep Waste",
+    catExpired: "Expired Food",
+    catOther: "Other",
+    date: "Date",
+    time: "Time",
+    next: "Next →",
+    back: "← Back",
+    weightKg: "Weight (kg)",
+    weightPlaceholder: "e.g. 12.5",
+    submitEntry: "Submit Entry",
+    entryLogged: "✅ Entry logged successfully",
+    fillRequired: "Please fill all required fields",
+    reportsTitle: "Reports & Analytics",
+    filterRange: "Date Range",
+    filterDept: "Department",
+    filterCat: "Category",
+    allDepts: "All Departments",
+    allCats: "All Categories",
+    thisWeek: "This Week",
+    thisMonth: "This Month",
+    last30: "Last 30 Days",
+    totalWaste: "Total Waste (kg)",
+    totalEntries: "Total Entries",
+    avgPerDay: "Avg per Day (kg)",
+    topCategory: "Top Category",
+    wasteByCategory: "Waste by Category",
+    wasteByDept: "Waste by Department",
+    wasteOverTime: "Waste Over Time",
+    exportCSV: "Export CSV",
+    noData: "No data for selected filters.",
+    partnerTitle: "Waste Partners & Pickups",
+    addPartner: "Add Partner",
+    pickupRequests: t('pickupRequests'),
+    createPickup: "Create Pickup Request",
+    partnerName: "Partner Name",
+    contactPerson: "Contact Person",
+    phone: "Phone",
+    email: "Email",
+    city: "City",
+    address: "Address",
+    status: "Status",
+    active: "Active",
+    inactive: "Inactive",
+    noPartners: "No partners added yet.",
+    noPickups: "No pickup requests yet.",
+    pickupStatus: "Status",
+    pickupDate: "Date",
+    pickupKg: "Est. kg",
+    pickupPartner: "Partner",
+    pending: "Pending",
+    confirmed: "Confirmed",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    adminTitle: "System Administration",
+    usersTab: "Users",
+    settingsTab: "Settings",
+    addUser: "Add User",
+    userName: "Full Name",
+    userEmail: "Email",
+    userRole: "Role",
+    userDept: "Department",
+    userStatus: "Status",
+    noUsers: "No users found.",
+    edit: "Edit",
+    deactivate: "Deactivate",
+    activate: "Activate",
+    deleteUser: "Delete",
+    staffRole: "Staff",
+    managerRole: "Manager",
+    partnerRole: "Partner",
+    adminRole: "Admin",
+    // Extra keys for merged dashboard
+    newRequests:       "New Requests",
+    kgCollected:       "kg Collected",
+    logWaste:          "＋ Log Waste",
+    requestPickup:     "🚛 Request Pickup",
+    logWasteTitle:     "Log Food Waste",
+    logStep1:          "Step 1 — Waste Details",
+    logStep2:          "Step 2 — Reason & Notes",
+    partnerTitle:      "Partner Coordination",
+    partnerSub:        "Manage pickup requests",
+    adminTitle:        "Admin Panel",
+    usersTab:          "User Management",
+    partnersTab:       "Partner Organizations",
+    exportCSV:         "⬇ Export CSV",
+    reportsSub:        "Waste data & compliance exports",
+    createPickup:      "＋ New Request",
+    sysSettings:       "⚙️ System Settings",
+    account:           "Account",
+    navAdminSection:   "Administration",
+    navMain:           "Navigation",
+  },
+  ar: {
+    dir: "rtl",
+    loading: "جاري تحميل RePlate...",
+    dashboard: "لوحة التحكم",
+    log: "تسجيل النفايات",
+    reports: "التقارير",
+    partner: "الشركاء",
+    admin: "الإدارة",
+    settings: "الإعدادات",
+    profile: "ملفي الشخصي",
+    signOut: "تسجيل الخروج",
+    welcome: "مرحباً",
+    kgToday: "كيلو اليوم",
+    entToday: "مدخلات اليوم",
+    pendPU: "طلبات استلام معلقة",
+    recent: "أحدث المدخلات",
+    lang: "اللغة",
+    currency: "العملة",
+    hospInfo: "معلومات المستشفى",
+    saveSettings: "حفظ الإعدادات",
+    notifs: "التنبيهات",
+    myAcc: "حسابي",
+    chPw: "تغيير كلمة المرور",
+    curPw: "كلمة المرور الحالية",
+    newPw: "كلمة المرور الجديدة",
+    confPw: "تأكيد كلمة المرور",
+    updPw: "تحديث كلمة المرور",
+    createPU: "إنشاء طلب استلام",
+    estKg: "الوزن التقديري (كجم)",
+    prefDate: "التاريخ المفضل",
+    wasteType: "نوع النفايات",
+    notes: "ملاحظات",
+    sendPU: "إرسال الطلب للشريك",
+    sysSettings: "إعدادات النظام",
+    noEntriesYet: "لا توجد مدخلات مسجلة بعد.",
+    logWaste: "＋ تسجيل نفايات",
+    requestPickup: "🚛 طلب استلام",
+    defaultCostPerKg: "التكلفة الافتراضية لكل كيلوغرام",
+    realTimeAlerts: "تنبيهات فورية",
+    autoNotifyPartners: "إشعار الشركاء تلقائياً",
+    profileTitle: "حسابي",
+    settingsSaved: "✅ تم حفظ الإعدادات",
+    invalidCredentials: "❌ بيانات الدخول غير صحيحة",
+    navMain: "الرئيسية",
+    navAdminSection: "الإدارة",
+    refresh: "تحديث",
+    notifications: "التنبيهات",
+    logWasteTitle: "تسجيل مدخل نفايات",
+    logStep1: "معلومات الوجبة",
+    logStep2: "الوزن",
+    logStep3: "تأكيد",
+    mealType: "نوع الوجبة",
+    breakfast: "فطور",
+    lunch: "غداء",
+    dinner: "عشاء",
+    snack: "وجبة خفيفة",
+    other: "أخرى",
+    department: "القسم",
+    category: "فئة النفايات",
+    catPlate: "نفايات الأطباق",
+    catPrep: "نفايات التحضير",
+    catExpired: "طعام منتهي الصلاحية",
+    catOther: "أخرى",
+    date: "التاريخ",
+    time: "الوقت",
+    next: "التالي ←",
+    back: "→ رجوع",
+    weightKg: "الوزن (كجم)",
+    weightPlaceholder: "مثال: 12.5",
+    submitEntry: "إرسال المدخل",
+    entryLogged: "✅ تم تسجيل المدخل بنجاح",
+    fillRequired: "يرجى ملء جميع الحقول المطلوبة",
+    reportsTitle: "التقارير والتحليلات",
+    filterRange: "النطاق الزمني",
+    filterDept: "القسم",
+    filterCat: "الفئة",
+    allDepts: "جميع الأقسام",
+    allCats: "جميع الفئات",
+    thisWeek: "هذا الأسبوع",
+    thisMonth: "هذا الشهر",
+    last30: "آخر 30 يوم",
+    totalWaste: "إجمالي النفايات (كجم)",
+    totalEntries: "إجمالي المدخلات",
+    avgPerDay: "المتوسط اليومي (كجم)",
+    topCategory: "الفئة الأعلى",
+    wasteByCategory: "النفايات حسب الفئة",
+    wasteByDept: "النفايات حسب القسم",
+    wasteOverTime: "النفايات عبر الزمن",
+    exportCSV: "تصدير CSV",
+    noData: "لا توجد بيانات للفلاتر المحددة.",
+    partnerTitle: "شركاء النفايات والاستلام",
+    addPartner: "إضافة شريك",
+    pickupRequests: "طلبات الاستلام",
+    createPickup: "إنشاء طلب استلام",
+    partnerName: "اسم الشريك",
+    contactPerson: "الشخص المسؤول",
+    phone: "الهاتف",
+    email: "البريد الإلكتروني",
+    city: "المدينة",
+    address: "العنوان",
+    status: "الحالة",
+    active: "نشط",
+    inactive: "غير نشط",
+    noPartners: "لم يتم إضافة شركاء بعد.",
+    noPickups: "لا توجد طلبات استلام بعد.",
+    pickupStatus: "الحالة",
+    pickupDate: "التاريخ",
+    pickupKg: "الوزن التقديري",
+    pickupPartner: "الشريك",
+    pending: "معلق",
+    confirmed: "مؤكد",
+    completed: "مكتمل",
+    cancelled: "ملغي",
+    adminTitle: "إدارة النظام",
+    usersTab: "المستخدمون",
+    settingsTab: "الإعدادات",
+    addUser: "إضافة مستخدم",
+    userName: "الاسم الكامل",
+    userEmail: "البريد الإلكتروني",
+    userRole: "الدور",
+    userDept: "القسم",
+    userStatus: "الحالة",
+    noUsers: "لا يوجد مستخدمون.",
+    edit: "تعديل",
+    deactivate: "تعطيل",
+    activate: "تفعيل",
+    deleteUser: "حذف",
+    staffRole: "موظف",
+    managerRole: "مدير",
+    partnerRole: "شريك",
+    adminRole: "مسؤول",
+    // Extra keys for merged dashboard
+    newRequests:       "طلبات جديدة",
+    kgCollected:       "كغ محصّلة",
+    logWaste:          "＋ تسجيل الهدر",
+    requestPickup:     "🚛 طلب استلام",
+    logWasteTitle:     "تسجيل هدر الطعام",
+    logStep1:          "الخطوة 1 — تفاصيل الهدر",
+    logStep2:          "الخطوة 2 — السبب والملاحظات",
+    partnerTitle:      "تنسيق الشريك",
+    partnerSub:        "إدارة طلبات الاستلام",
+    adminTitle:        "لوحة الإدارة",
+    usersTab:          "إدارة المستخدمين",
+    partnersTab:       "المنظمات الشريكة",
+    exportCSV:         "⬇ تصدير CSV",
+    reportsSub:        "بيانات الهدر والتصدير",
+    createPickup:      "＋ طلب جديد",
+    sysSettings:       "⚙️ إعدادات النظام",
+    account:           "الحساب",
+    navAdminSection:   "الإدارة",
+    navMain:           "القائمة الرئيسية",
+  }
+};
+
+
+function t(key) {
+  const lang = DB?.settings?.language || 'en';
+  return I18N[lang]?.[key] || I18N['en'][key] || key;
+}
+
+// ══════════════════════════════════════════════════════
+//  SECURITY & AUTH ENGINE
+// ══════════════════════════════════════════════════════
+
+const SES_KEY = 'rp4_ses';
+const LOCAL_KEY = 'rp4_local_cache';
+
+
+// ══════════════════════════════════════════════════════
+//  FIREBASE REALTIME DATABASE
+//  Free cloud storage — 1GB, always on, no setup needed
+// ══════════════════════════════════════════════════════
+const FB_URL = 'https://replate-hci-default-rtdb.firebaseio.com/db.json';
+
+let _saveTimer = null;
+let _lastSaveLen = 0;
+
+async function loadFromCloud() {
+  showSyncBar('⏳ Loading data…', false);
+  try {
+    const res = await fetch(FB_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    if (!data || !data.users) throw new Error('empty');
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch {}
+    showSyncBar('✓ Connected', false);
+    return data;
+  } catch(e) {
+    // Fall back to local cache
+    try {
+      const r = localStorage.getItem(LOCAL_KEY);
+      if (r) {
+        showSyncBar('⚠️ Offline — using cached data', true);
+        return JSON.parse(r);
+      }
+    } catch {}
+    showSyncBar('⚠️ Could not connect', true);
+    return null;
+  }
+}
+
+async function saveDB(db) {
+  DB = db;
+  // Write to local cache immediately (instant)
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(db)); } catch {}
+  // Debounce cloud write — max once per second
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      await fetch(FB_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(db)
+      });
+      showSyncBar('✓ Saved', false);
+    } catch {
+      showSyncBar('⚠️ Offline — saved locally', true);
+    }
+  }, 1000);
+}
+
+function getDB() {
+  try { const r = localStorage.getItem(LOCAL_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+
+// Simple hash
+function hashPw(pw, salt) {
+  let s = pw + ':' + salt + ':rp2026';
+  for (let i = 0; i < 5; i++) s = btoa(s);
+  return s;
+}
+function genSalt() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+
+// ── SESSION ──
+function getSession() {
+  try { const r = sessionStorage.getItem(SES_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function setSession(user) {
+  try { sessionStorage.setItem(SES_KEY, JSON.stringify({userId: user.id, role: user.role, ts: Date.now()})); } catch {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SES_KEY); } catch {}
+}
+
+
+
+function authenticate(email, pw) {
+  if (!DB) return null;
+  const u = DB.users.find(u => u.email.toLowerCase() === email.toLowerCase().trim() && u.status === 'Active');
+  if (!u) return null;
+  const hash = hashPw(pw, u.salt);
+  if (hash !== u.pwHash) return null;
+  return u;
+}
+
+// ══════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════
+
+function today(offset=0) {
+  const d = new Date(); d.setDate(d.getDate()-offset);
+  return d.toISOString().slice(0,10);
+}
+function nowTime() { return new Date().toTimeString().slice(0,5); }
+
+const SEED_ENTRIES = [];
+const SEED_PICKUPS = [];
+
+// ══════════════════════════════════════════════════════
+//  APP STATE
+// ══════════════════════════════════════════════════════
+let DB = null;
+let currentUser = null;
+let currentScreen = '';
+let logStep = 1, logForm = {};
+let sortCol = 'date', sortDir = 'desc';
+let reportFilters = {range:'This Week',dept:'All',cat:'All'};
+let setupData = {};
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+window.onload = async function() {
+  DB = await loadFromCloud();
+  document.getElementById('loading-screen').style.display = 'none';
+
+  if (!DB || !DB.users) {
+    showScreen('setup');
+  } else {
+    const ses = getSession();
+    if (ses) {
+      const u = DB.users.find(u => u.id === ses.userId && u.status === 'Active');
+      if (u && (Date.now() - ses.ts) < 8 * 3600000) {
+        currentUser = u;
+        launchApp();
+        return;
+      }
+    }
+    showScreen('login');
+  }
+};
+
+// Poll for updates every 30 seconds
+setInterval(async () => {
+  if (!currentUser || !currentScreen) return;
+  try {
+    const res = await fetch(FB_URL, { cache: 'no-store' });
+    if (!res.ok) return;
+    const fresh = await res.json();
+    if (!fresh || !fresh.users) return;
+    const newLen = (fresh.entries?.length||0) + (fresh.pickups?.length||0) + (fresh.users?.length||0);
+    const curLen = (DB.entries?.length||0) + (DB.pickups?.length||0) + (DB.users?.length||0);
+    if (newLen !== curLen) {
+      DB = fresh;
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(DB)); } catch {}
+      renderCurrentScreen();
+      showSyncBar('✓ Updated', false);
+    }
+  } catch {}
+}, 30000);
+
+
+function showScreen(name) {
+  ['setup','login','forgot','register','app'].forEach(s => {
+    const el = document.getElementById(s+'-screen');
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById(name+'-screen');
+  if (target) { target.style.display = (name==='app') ? 'flex' : 'flex'; }
+  if (name === 'login') {
+    const hosp = DB?.hospital?.name;
+    if (hosp) document.getElementById('login-hosp-name').textContent = `Sign in to ${hosp}`;
+  }
+  if (name === 'register') {
+    ['reg-name','reg-email','reg-org','reg-dept','reg-pw','reg-pw2'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    const role = document.getElementById('reg-role'); if(role) role.value='';
+    const rf = document.getElementById('reg-form'); if(rf) rf.style.display = 'block';
+    const rs = document.getElementById('reg-success'); if(rs) rs.style.display = 'none';
+    const re = document.getElementById('reg-err'); if(re) re.classList.remove('show');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  SETUP FLOW
+// ══════════════════════════════════════════════════════
+function goSetupStep(n) {
+  document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('setup-s'+n).classList.add('active');
+  for (let i=1; i<=3; i++) {
+    document.getElementById('sp'+i).style.background = i <= n ? '#2A6348' : '#DFD9D0';
+  }
+}
+
+function setupStep1() {
+  const name  = document.getElementById('s-hosp-name').value.trim();
+  const city  = document.getElementById('s-hosp-city').value.trim();
+  const email = document.getElementById('s-hosp-email').value.trim();
+  const err = document.getElementById('s1-err');
+  if (!name) { showErr(err, 'Hospital name is required'); return; }
+  if (!email || !email.includes('@')) { showErr(err, 'Enter a valid contact email'); return; }
+  err.classList.remove('show');
+  setupData.hospital = {name, city, email};
+  goSetupStep(2);
+  setTimeout(() => document.getElementById('s-admin-name').focus(), 100);
+}
+
+function setupStep2() {
+  const name = document.getElementById('s-admin-name').value.trim();
+  const email = document.getElementById('s-admin-email').value.trim();
+  const pw    = document.getElementById('s-admin-pw').value;
+  const pw2   = document.getElementById('s-admin-pw2').value;
+  const err   = document.getElementById('s2-err');
+  if (!name) { showErr(err, 'Full name is required'); return; }
+  if (!email || !email.includes('@')) { showErr(err, 'Enter a valid email address'); return; }
+  const pwErr = validatePassword(pw);
+  if (pwErr) { showErr(err, '⚠ ' + pwErr); return; }
+  if (pw !== pw2) { showErr(err, 'Passwords do not match'); return; }
+  err.classList.remove('show');
+  setupData.admin = {name, email, pw};
+  // Show review
+  document.getElementById('setup-review').innerHTML = `
+    <div style="font-size:10px;color:#78746A;font-weight:700;margin-bottom:10px">SETUP SUMMARY</div>
+    ${[['Hospital',setupData.hospital.name],['Location',setupData.hospital.city||'—'],['Contact',setupData.hospital.email],['Admin Name',setupData.admin.name],['Admin Email',setupData.admin.email]].map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+        <span style="color:#78746A">${k}</span><strong>${v}</strong></div>`).join('')}`;
+  goSetupStep(3);
+}
+
+function finishSetup() {
+  const salt = genSalt();
+  const adminUser = {
+    id: 1, name: setupData.admin.name, email: setupData.admin.email,
+    role: 'Admin', dept: 'Administration', status: 'Active',
+    salt, pwHash: hashPw(setupData.admin.pw, salt),
+    createdAt: new Date().toISOString(), mustChangePw: false
+  };
+  const freshDB = {
+    hospital: setupData.hospital,
+    users: [adminUser],
+    pendingUsers: [],
+    entries: SEED_ENTRIES,
+    pickups: SEED_PICKUPS,
+    partners: [],
+    departments: ['Kitchen A','Kitchen B','Ward B','Ward C (ICU)','Storage','Staff Canteen','Pediatrics','Emergency'],
+    categories: ['Meat / Protein','Rice / Grains','Vegetables','Prepared Meals','Dairy','Bread / Bakery','Plate Waste','Mixed / Other'],
+    settings: {notifs:true,autoNotify:true,backup:true,audit:true,currency:'SAR',defaultCostPerKg:5,language:'en'},
+    nextId: 2000,
+    auditLog: [{ts: new Date().toISOString(), action:'System initialized', user: adminUser.name}]
+  };
+  saveDB(freshDB);
+  DB = freshDB;
+  toast('🚀 RePlate launched! Welcome, ' + adminUser.name);
+  currentUser = adminUser;
+  setSession(adminUser);
+  launchApp();
+}
+// ══════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.toLowerCase());
+}
+
+function validatePassword(pw) {
+  if (pw.length < 8)               return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(pw))           return 'Password must include at least one uppercase letter.';
+  if (!/[0-9]/.test(pw))           return 'Password must include at least one number.';
+  if (!/[^A-Za-z0-9]/.test(pw))    return 'Password must include at least one special character (e.g. @, #, !).';
+  return null; // valid
+}
+
+function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pw    = document.getElementById('l-pw').value;
+  const err   = document.getElementById('l-err');
+  const btn   = document.getElementById('l-btn');
+
+  err.classList.remove('show');
+
+  if (!email) { showErr(err,'Enter your email address'); shakeEl('l-email'); return; }
+  if (!validateEmail(email)) { showErr(err,'⚠ Please enter a valid email address (e.g. name@hospital.sa)'); shakeEl('l-email'); return; }
+  if (!pw)    { showErr(err,'Enter your password'); shakeEl('l-pw'); return; }
+
+  // Attempt auth
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    const user = authenticate(email, pw);
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+
+    if (!user) {
+      showErr(err, 'Incorrect email or password.');
+      shakeEl('l-pw');
+      addAuditLog(`Failed login attempt for: ${email}`);
+      return;
+    }
+
+    // Success
+    currentUser = user;
+    if (document.getElementById('l-remember').checked) {
+      setSession(user);
+    } else {
+      try { sessionStorage.setItem(SES_KEY, JSON.stringify({userId:user.id,role:user.role,ts:Date.now()})); } catch {}
+    }
+    addAuditLog(`Login: ${user.name} (${user.role})`);
+    launchApp();
+  }, 400);
+}
+
+function showForgot() { showScreen('forgot'); }
+function showLogin()  { showScreen('login'); }
+
+function submitRegistration() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const org   = document.getElementById('reg-org').value.trim();
+  const dept  = document.getElementById('reg-dept').value.trim();
+  const role  = document.getElementById('reg-role').value;
+  const pw    = document.getElementById('reg-pw').value;
+  const pw2   = document.getElementById('reg-pw2').value;
+  const err   = document.getElementById('reg-err');
+
+  if (!name)                        { showErr(err,'Full name is required'); return; }
+  if (!email||!email.includes('@')) { showErr(err,'Enter a valid work email'); return; }
+  if (!org)                         { showErr(err,'Organization name is required'); return; }
+  if (!role)                        { showErr(err,'Please select a role'); return; }
+  const pwErrChpw = validatePassword(pw);
+  if (pwErrChpw) { showErr(err,'⚠ ' + pwErrChpw); return; }
+  if (pw !== pw2)                   { showErr(err,'Passwords do not match'); return; }
+
+  // Check if email already registered or pending
+  const existing = DB?.users?.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (existing) { showErr(err,'This email is already registered. Please sign in.'); return; }
+  const pending = DB?.pendingUsers?.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (pending)  { showErr(err,'A request for this email is already pending admin approval.'); return; }
+
+  err.classList.remove('show');
+
+  // Store as pending user with hashed password
+  if (!DB.pendingUsers) DB.pendingUsers = [];
+  const salt = genSalt();
+  DB.pendingUsers.push({
+    id: DB.nextId++,
+    name, email, org, dept, role,
+    salt, pwHash: hashPw(pw, salt),
+    requestedAt: new Date().toISOString(),
+    status: 'Pending'
+  });
+  saveDB(DB);
+  addAuditLog(`Access request from: ${name} (${email}) — ${role} @ ${org}`);
+
+  // Show success
+  document.getElementById('reg-form').style.display = 'none';
+  document.getElementById('reg-summary').innerHTML =
+    [['Name',name],['Email',email],['Organization',org],['Role Requested',role],['Department',dept||'—']]
+    .map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="color:#78746A">${k}</span><strong>${v}</strong></div>`).join('');
+  document.getElementById('reg-success').style.display = 'block';
+}
+
+function submitForgot() {
+  const email = document.getElementById('fp-email').value.trim();
+  const msg   = document.getElementById('fp-msg');
+  if (!email || !email.includes('@')) { msg.innerHTML = '<div class="alert alert-red"><span>⚠️</span><div>Enter a valid email address</div></div>'; msg.style.display='block'; return; }
+  const u = DB?.users.find(u=>u.email.toLowerCase()===email.toLowerCase());
+  msg.innerHTML = `<div class="alert alert-green"><span>✅</span><div>${u ? `Request sent to admin. They will reset the password for <strong>${email}</strong> and notify you.` : 'If this email exists in the system, a reset request has been logged.'}</div></div>`;
+  msg.style.display = 'block';
+  if (u) addAuditLog(`Password reset requested for: ${email}`);
+}
+
+// ══════════════════════════════════════════════════════
+//  CHANGE PASSWORD
+// ══════════════════════════════════════════════════════
+function changePassword() {
+  const old  = document.getElementById('cp-old').value;
+  const npw  = document.getElementById('cp-new').value;
+  const npw2 = document.getElementById('cp-new2').value;
+  const err  = document.getElementById('cp-err');
+
+  const hash = hashPw(old, currentUser.salt);
+  if (hash !== currentUser.pwHash) { showErr(err,'Current password is incorrect'); return; }
+  const npwErr = validatePassword(npw);
+  if (npwErr) { showErr(err,'⚠ ' + npwErr); return; }
+  if (npw !== npw2) { showErr(err,'New passwords do not match'); return; }
+
+  const newSalt = genSalt();
+  const user = DB.users.find(u=>u.id===currentUser.id);
+  if (user) { user.salt = newSalt; user.pwHash = hashPw(npw, newSalt); user.mustChangePw = false; }
+  currentUser.salt = newSalt;
+  currentUser.pwHash = hashPw(npw, newSalt);
+  saveDB(DB);
+  addAuditLog(`Password changed: ${currentUser.name}`);
+  closeModal('overlay-chpw');
+  toast('✅ Password updated successfully');
+}
+
+// ══════════════════════════════════════════════════════
+//  LAUNCH APP
+// ══════════════════════════════════════════════════════
+const ROLE_CFG = {
+  Staff:   {badge:'STAFF',   av:(u)=>initials(u), nav:['dashboard','log','reports','partner']},
+  Manager: {badge:'MANAGER', av:(u)=>initials(u), nav:['dashboard','reports','partner']},
+  Partner: {badge:'PARTNER', av:(u)=>initials(u), nav:['dashboard','partner']},
+  Admin:   {badge:'ADMIN',   av:(u)=>initials(u), nav:['dashboard','reports','partner','admin']},
+};
+const NAV_LBL = {dashboard:'Dashboard',log:'Log Waste',reports:'Reports',partner:'Partner',admin:'Admin'};
+const NAV_ICO = {
+  dashboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+  reports:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+  partner:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  admin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="19" height="19"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+};
+const CAT_ICONS = {'Meat / Protein':'🍖','Rice / Grains':'🍚','Vegetables':'🥗','Plate Waste':'🍽️','Prepared Meals':'🍲','Dairy':'🥛','Bread / Bakery':'🍞','Mixed / Other':'🗑️'};
+
+function initials(u) { return (u.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+
+function launchApp() {
+  const cfg = ROLE_CFG[currentUser.role];
+  if(typeof t === 'function') document.body.dir = t('dir');
+  document.getElementById('tb-role').textContent = cfg.badge;
+  document.getElementById('tb-avatar').textContent = initials(currentUser);
+  const hosp = DB.hospital?.name || 'RePlate';
+  const tbTitle = document.querySelector('.tb-title');
+  if (tbTitle) tbTitle.textContent = 'RePlate';
+
+  // Update sidebar user info
+  const sbAvatar = document.getElementById('sb-avatar');
+  const sbName = document.getElementById('sb-name');
+  const sbRole = document.getElementById('sb-role');
+  const sbHosp = document.getElementById('sb-hosp');
+  if (sbAvatar) sbAvatar.textContent = initials(currentUser);
+  if (sbName) sbName.textContent = currentUser.name;
+  if (sbRole) sbRole.textContent = currentUser.role + (currentUser.dept?' · '+currentUser.dept:'');
+  if (sbHosp) sbHosp.textContent = hosp;
+  // Also update topbar avatar
+  const tbAvatar = document.getElementById('tb-avatar');
+  if (tbAvatar) tbAvatar.textContent = initials(currentUser);
+
+  // Build sidebar nav with section labels
+  const sidebarNav = document.getElementById('sidebar-nav');
+  const mobileNav = document.getElementById('bnav');
+  const mainNav = ['dashboard','log','reports','partner'].filter(id=>cfg.nav.includes(id));
+  const adminNav = cfg.nav.filter(id=>!mainNav.includes(id)); // e.g. admin
+
+  let navHTML = `<div class="sidebar-section-label">${t('navMain')}</div>`;
+  navHTML += mainNav.map(id=>`
+    <button class="ni" id="ni-${id}" onclick="navigate('${id}')">
+      ${NAV_ICO[id]}<span>${t(id) || NAV_LBL[id]}</span>
+    </button>`).join('');
+
+  if(adminNav.length) {
+    navHTML += `<div class="sidebar-divider"></div>
+    <div class="sidebar-section-label">${t('navAdminSection')}</div>`;
+    navHTML += adminNav.map(id=>`
+      <button class="ni" id="ni-${id}" onclick="navigate('${id}')">
+        ${NAV_ICO[id]}<span>${t(id) || NAV_LBL[id]}</span>
+      </button>`).join('');
+  }
+
+  navHTML += `<div class="sidebar-divider"></div>
+    <div class="sidebar-section-label">${t('account') || 'Account'}</div>
+    <button class="ni" onclick="openModal('overlay-settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>${t('settings') || 'Settings'}</span>
+    </button>
+    <button class="ni" onclick="openModal('overlay-profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span>${t('profile') || 'My Profile'}</span>
+    </button>
+    <button class="ni" onclick="logout()" style="color:#B83025">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>${t('signOut') || 'Sign Out'}</span>
+    </button>`;
+
+  const sidebarNavEl = document.getElementById('sidebar-nav');
+  if(sidebarNavEl) sidebarNavEl.innerHTML = navHTML;
+  // Mobile nav — just main items
+  if(mobileNav) mobileNav.innerHTML = cfg.nav.map(id=>`
+    <button class="ni" id="ni-mob-${id}" onclick="navigate('${id}')">
+      ${NAV_ICO[id]}<span>${t(id) || NAV_LBL[id]}</span>
+    </button>`).join('');
+
+  showScreen('app');
+  navigate('dashboard');
+  setTimeout(renderRightPanel, 100);
+
+  // Prompt password change if flagged
+  if (currentUser.mustChangePw) {
+    setTimeout(() => {
+      toast('⚠️ Please change your temporary password');
+      openModal('overlay-chpw');
+    }, 1000);
+  }
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    sb.classList.toggle('mobile-open');
+    const ov = document.getElementById('mobile-overlay');
+    if (ov) ov.classList.toggle('show', sb.classList.contains('mobile-open'));
+  } else {
+    sb.classList.toggle('collapsed');
+  }
+}
+function closeMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.remove('mobile-open');
+  const ov = document.getElementById('mobile-overlay');
+  if (ov) ov.classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+//  RIGHT PANEL — supplementary info sidebar
+// ══════════════════════════════════════════════════════
+function renderRightPanel() { /* no-op: right panel not in layout */ }
+
+function navigate(screen) {
+  currentScreen = screen;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('s-'+screen);
+  if (el) { el.classList.add('active'); el.innerHTML = ''; renderScreen(screen, el); }
+  document.querySelectorAll(`#ni-${screen}, #ni-mob-${screen}`).forEach(n => n.classList.add('active'));
+  const crumb = document.getElementById('tb-crumb');
+  if(crumb) crumb.innerHTML = NAV_LBL[screen] ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>${NAV_LBL[screen]}` : '';
+  document.getElementById('content').scrollTop = 0;
+  if (window.innerWidth <= 768) closeMobileSidebar();
+  renderRightPanel();
+}
+function renderCurrentScreen() { if (currentScreen) navigate(currentScreen); renderRightPanel(); }
+function renderScreen(n, el) {
+  el.classList.add('anim-fadeup');
+  if(n==='dashboard') renderDashboard(el);
+  else if(n==='log')     renderLog(el);
+  else if(n==='reports') renderReports(el);
+  else if(n==='partner') renderPartner(el);
+  else if(n==='admin')   renderAdmin(el);
+}
+
+function logout() {
+  clearSession();
+  addAuditLog(`Logout: ${currentUser?.name}`);
+  currentUser = null; currentScreen = '';
+  showScreen('login');
+  document.getElementById('l-email').value = '';
+  document.getElementById('l-pw').value = '';
+}
+
+// ══════════════════════════════════════════════════════
+//  PROFILE MODAL
+// ══════════════════════════════════════════════════════
+function openModal(id) {
+  if (id==='overlay-profile') buildProfileModal();
+  if (id==='overlay-settings') buildSettingsModal();
+  document.getElementById(id).classList.add('show');
+}
+
+function buildSettingsModal() {
+  const content = document.getElementById('settings-content');
+  const currency = DB.settings?.currency || 'SAR';
+  const lang = DB.settings?.language || 'en';
+  const costPerKg = DB.settings?.defaultCostPerKg || 5;
+  const hosp = DB.hospital || {};
+
+  content.innerHTML = `
+    <div style="font-weight:600;font-size:13px;margin-bottom:10px">🏥 ${t('hospInfo')}</div>
+    <div style="background:#F7F5F0;border-radius:9px;padding:12px 14px;margin-bottom:16px">
+      ${[['Name',hosp.name||'—'],['City',hosp.city||'—'],['Contact',hosp.email||'—']].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+          <span style="color:#78746A">${k}</span><strong>${v}</strong></div>`).join('')}
+    </div>
+
+    <div class="fc-2" style="margin-bottom:16px">
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">${t('lang')}</label>
+        <select class="fc" id="sm-lang">
+          <option value="en" ${lang==='en'?'selected':''}>🇬🇧 English</option>
+          <option value="ar" ${lang==='ar'?'selected':''}>🇸🇦 العربية (Arabic)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">${t('currency')}</label>
+        <select class="fc" id="sm-currency">
+          ${['SAR','USD','EUR','GBP','AED'].map(c=>`<option${c===currency?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">${t('defaultCostPerKg')}</label>
+      <input class="fc" id="sm-cost" type="number" value="${costPerKg}" step="0.5" min="0">
+    </div>
+
+    <div style="font-weight:600;font-size:13px;margin-bottom:10px">🔔 ${t('notifs')}</div>
+    ${[['notifs', t('realTimeAlerts')],['autoNotify', t('autoNotifyPartners')],['backup','Daily backup'],['audit','Audit log tracking']].map(([k,l])=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F0EDE8">
+        <span style="font-size:12px">${l}</span>
+        <button class="sw" style="background:${DB.settings[k]?'#2A6348':'#DFD9D0'}" onclick="toggleSetting('${k}')">
+          <div class="sw-thumb" style="left:${DB.settings[k]?19:2}px"></div>
+        </button>
+      </div>`).join('')}
+
+    <button class="btn btn-p btn-full" style="margin-top:18px" onclick="saveSettingsModal()">${t('saveSettings')}</button>`;
+}
+function saveSettingsModal() {
+  DB.settings.language = document.getElementById('sm-lang').value;
+  DB.settings.currency = document.getElementById('sm-currency').value;
+  DB.settings.defaultCostPerKg = Number(document.getElementById('sm-cost').value || 5);
+  saveDB(DB);
+  addAuditLog('Settings updated by ' + currentUser.name);
+  closeModal('overlay-settings');
+  toast(t('settingsSaved'));
+  launchApp();
+}
+
+function toggleSetting(key) {
+  DB.settings[key] = !DB.settings[key];
+  buildSettingsModal();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function buildProfileModal() {
+  const u = currentUser;
+  document.getElementById('profile-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="width:54px;height:54px;border-radius:50%;background:#E4F2EB;border:2px solid #2A6348;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#2A6348;margin:0 auto 10px">${initials(u)}</div>
+      <div style="font-weight:700;font-size:15px">${u.name}</div>
+      <div style="font-size:11px;color:#78746A">${u.email}</div>
+      <div style="margin-top:6px"><span class="tag ${roleTagColor(u.role)}">${u.role}</span></div>
+    </div>
+    <div style="background:#EDEBE5;border-radius:9px;padding:12px 14px;margin-bottom:16px">
+      ${[['Department',u.dept||'—'],['Status',u.status],['Hospital',DB.hospital?.name||'—']].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">
+          <span style="color:#78746A">${k}</span><strong>${v}</strong></div>`).join('')}
+    </div>
+    <button class="btn btn-o btn-full" style="margin-bottom:8px" onclick="closeModal('overlay-profile');openModal('overlay-chpw')">🔐 Change Password</button>
+    <button class="btn btn-danger btn-full" onclick="closeModal('overlay-profile');logout()">Sign Out</button>`;
+}
+
+function roleTagColor(r) {
+  return {Staff:'tag-green',Manager:'tag-gray',Partner:'tag-orange',Admin:'tag-red',Admin:'tag-purple'}[r]||'tag-gray';
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function makeCard(inner) { const d=document.createElement('div'); d.className='card'; d.innerHTML=inner||''; return d; }
+function tag(l,c='green') { return `<span class="tag tag-${c}">${l}</span>`; }
+function statusColor(s) { return s==='Completed'||s==='Approved'||s==='En Route'?'green':s==='Pending'?'yellow':s==='Cancelled'?'red':'gray'; }
+function roleTagColor2(r) { return {Staff:'green',Manager:'gray',Partner:'orange',Admin:'purple'}[r]||'gray'; }
+
+
+function hideErr(el) {
+  if(el) el.classList.remove('show');
+}
+
+function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+function shakeEl(id) { const el=document.getElementById(id); if(el){el.classList.remove('anim-shake');void el.offsetWidth;el.classList.add('anim-shake');} }
+
+let toastTimer;
+function toast(msg) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+function showSyncBar(msg,warn=false) {
+  const b=document.getElementById('sync-bar'); b.textContent=msg; b.className='show'+(warn?' warn':'');
+  setTimeout(()=>b.className='',2000);
+}
+
+function togglePw(id, eye) {
+  const inp=document.getElementById(id);
+  inp.type = inp.type==='password'?'text':'password';
+  eye.textContent = inp.type==='password'?'👁':'🙈';
+}
+
+function checkStrength(pw, prefix) {
+  const bars = ['b1','b2','b3','b4'].map(b=>document.getElementById(prefix+'-'+b)||document.getElementById(b.replace('b','cp-b')));
+  const score = [pw.length>=8, /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^a-zA-Z0-9]/.test(pw)].filter(Boolean).length;
+  const colors = ['','#B83025','#C4672F','#B07D10','#2A6348'];
+  const labels = ['','Weak','Fair','Good','Strong'];
+  bars.forEach((b,i)=>{ if(b) b.style.background = i<score ? colors[score] : '#DFD9D0'; });
+  const lbl = document.getElementById(prefix+'-lbl')||document.getElementById('s-strength-lbl');
+  if(lbl) lbl.textContent = pw.length?labels[score]:'Enter a password';
+}
+
+async function refreshFromCloud() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) btn.style.opacity = '0.4';
+  showSyncBar('⏳ Refreshing…', false);
+  try {
+    const res = await fetch(FB_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    const fresh = await res.json();
+    if (fresh && fresh.users) {
+      DB = fresh;
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(DB)); } catch {}
+      renderCurrentScreen();
+      renderRightPanel();
+      showSyncBar('✓ Data refreshed', false);
+    }
+  } catch {
+    showSyncBar('⚠️ Could not reach server', true);
+  }
+  if (btn) btn.style.opacity = '1';
+}
+
+function openNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  const list = document.getElementById('notif-list');
+  const notifs = buildNotifications();
+  list.innerHTML = notifs.map(n => `
+    <div class="np-item">
+      <div class="np-dot" style="background:${n.color}"></div>
+      <div><div class="np-text">${n.msg}</div><div class="np-time">${n.time}</div></div>
+    </div>`).join('') || '<div style="padding:16px;font-size:11px;color:#78746A;text-align:center">No new notifications</div>';
+  panel.classList.toggle('show');
+  // Close when clicking outside
+  setTimeout(() => document.addEventListener('click', function closePanel(e) {
+    if (!panel.contains(e.target) && !e.target.closest('.tb-icon')) { panel.classList.remove('show'); document.removeEventListener('click', closePanel); }
+  }), 100);
+}
+
+function buildNotifications() {
+  const notifs = [];
+  const todayStr = today(0);
+  const pendingPU = DB.pickups.filter(p=>p.status==='Pending');
+  const pendingReg = (DB.pendingUsers||[]).filter(u=>u.status==='Pending');
+  const wardBKg = DB.entries.filter(e=>e.dept==='Ward B'&&e.date===todayStr).reduce((s,e)=>s+Number(e.kg),0);
+  if (currentUser.role==='Admin' && pendingReg.length>0)
+    notifs.push({color:'#C4672F', msg:'👤 '+pendingReg.length+' access request'+(pendingReg.length>1?'s':'')+' awaiting your approval', time:'Admin Panel → Access Requests'});
+  if (wardBKg > 20) notifs.push({color:'#B83025', msg:'⚠️ High waste in Ward B — '+wardBKg+' kg logged today', time:'Today'});
+  pendingPU.forEach(p => notifs.push({color:'#B07D10', msg:'🚛 Pickup '+p.id+' awaiting confirmation from '+p.partner, time:p.date}));
+  const recent = DB.entries.slice(0,2);
+  recent.forEach(e => notifs.push({color:'#2A6348', msg:'✅ '+e.user+' logged '+e.kg+'kg '+e.category+' — '+e.dept, time:e.date+' '+e.time}));
+  const dot = document.querySelector('.tb-dot');
+  if (dot) dot.style.display = notifs.length > 0 ? 'block' : 'none';
+  return notifs;
+}
+
+function addAuditLog(action) {
+  if (!DB) return;
+  if (!DB.auditLog) DB.auditLog = [];
+  DB.auditLog.unshift({ts:new Date().toISOString(),action,user:currentUser?.name||'system'});
+  if (DB.auditLog.length > 200) DB.auditLog = DB.auditLog.slice(0,200);
+  saveDB(DB);
+}
+
+function getFiltered() {
+  const now=new Date();
+  return DB.entries.filter(e=>{
+    const d=new Date(e.date);
+    const inR = reportFilters.range==='This Week'?(now-d)<7*86400000
+               :reportFilters.range==='This Month'?d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()
+               :true;
+    return inR&&(reportFilters.dept==='All'||e.dept===reportFilters.dept)&&(reportFilters.cat==='All'||e.category.includes(reportFilters.cat)||reportFilters.cat.includes(e.category.split('/')[0].trim()));
+  });
+}
+
+function weekChart(entries) {
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const data=Array.from({length:7},(_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-(6-i));
+    const ds=d.toISOString().slice(0,10);
+    const v=entries.filter(e=>e.date===ds).reduce((s,e)=>s+Number(e.kg),0);
+    return{l:days[d.getDay()],v};
+  });
+  const max=Math.max(...data.map(d=>d.v),1);
+  return data.map(d=>({...d,hi:d.v===max&&max>0}));
+}
+
+function buildBarChart(data) {
+  const max=Math.max(...data.map(d=>d.v),1);
+  const div=document.createElement('div'); div.className='barchart';
+  data.forEach(d=>{
+    const h=Math.max(d.v>0?(d.v/max)*62:0,d.v>0?3:0);
+    div.innerHTML+=`<div class="bc-col"><div class="bc-bar" style="height:${h}px;background:${d.hi?'#C4672F':'#2A6348'};opacity:.7" title="${d.v} kg" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.7"></div><div class="bc-lbl">${d.l}</div></div>`;
+  });
+  return div;
+}
+
+// ══════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════
+
+function buildDonutChart(data, size=120) {
+  // data = [{label, value, color}]
+  const total = data.reduce((s,d)=>s+d.value,0)||1;
+  let offset = 0;
+  const r = 40, cx = size/2, cy = size/2;
+  const strokeW = 18;
+  const circles = data.map(d => {
+    const pct = d.value / total;
+    const dash = pct * 2 * Math.PI * r;
+    const gap = (1-pct) * 2 * Math.PI * r;
+    const el = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${strokeW}" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-dashoffset="${(-offset*2*Math.PI*r/1).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += pct;
+    return el;
+  });
+  return `<svg width="${size}" height="${size}" style="display:block">${circles.join('')}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1814">${total.toFixed(0)}</text><text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="8" fill="#78746A">kg</text></svg>`;
+}
+
+function buildHBarChart(data, currency='') {
+  const max = Math.max(...data.map(d=>d.value),1);
+  return data.map(d=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="font-weight:500">${d.label}</span>
+        <span style="color:#78746A">${d.value.toFixed(1)}${currency?' '+currency:' kg'}</span>
+      </div>
+      <div style="background:#EDEBE5;border-radius:4px;height:7px;overflow:hidden">
+        <div style="width:${(d.value/max*100).toFixed(0)}%;height:100%;background:${d.color||'#2A6348'};border-radius:4px;transition:width .4s"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderDashboard(el) {
+  const todayStr=today(0);
+  const todayE=DB.entries.filter(e=>e.date===todayStr);
+  const todayKg=todayE.reduce((s,e)=>s+Number(e.kg),0);
+  const pending=DB.pickups.filter(p=>p.status==='Pending').length;
+  const weekE=DB.entries.filter(e=>(new Date()-new Date(e.date))<7*86400000);
+  const weekKg=weekE.reduce((s,e)=>s+Number(e.kg),0);
+  const role=currentUser.role;
+  const hour=new Date().getHours();
+  const isEmpty = DB.entries.length === 0;
+
+  el.innerHTML=`
+    <div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:2px">
+      ${role==='Staff'?`${hour<12?'Good morning':'Good afternoon'} 👋`:role==='Manager'?'Manager Dashboard 📊':role==='Partner'?'Partner Overview 🚛':'System Overview ⚙️'}
+    </div>
+    <div style="font-size:11px;color:#78746A;margin-bottom:3px">
+      <span class="live-dot"></span>${new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+    </div>
+    <div style="font-size:11px;color:#78746A;margin-bottom:16px">${DB.hospital?.name||''}</div>`;
+
+  // Empty state welcome card
+  if(isEmpty && role !== 'Partner') {
+    const wc = makeCard(`
+      <div style="text-align:center;padding:20px 8px 12px">
+        <div style="font-size:38px;margin-bottom:10px">🏥</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Welcome to RePlate!</div>
+        <div style="font-size:11px;color:#78746A;line-height:1.7;margin-bottom:18px">
+          Your dashboard is ready. Start by logging waste entries or adding users from the Admin panel. Data will appear here automatically.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${role==='Staff'?`<button class="btn btn-p btn-full" onclick="navigate('log')">＋ Log First Waste Entry</button>`:''}
+          ${role==='Admin'?`<button class="btn btn-p btn-full" onclick="navigate('admin')">⚙️ Go to Admin Panel</button><button class="btn btn-o btn-full" style="margin-top:0" onclick="navigate('reports')">📊 View Reports</button>`:''}
+          ${role==='Manager'?`<button class="btn btn-p btn-full" onclick="navigate('reports')">📊 View Reports</button>`:''}
+        </div>
+      </div>
+      <div style="background:#F7F5F0;border-radius:9px;padding:12px 14px;margin-top:8px">
+        <div style="font-size:10px;font-weight:700;color:#78746A;letter-spacing:.5px;margin-bottom:8px">GETTING STARTED</div>
+        ${[
+          ['1','Admin adds users','Go to Admin → Users → Add staff, managers, and partner accounts'],
+          ['2','Staff log waste','Staff tap Log Waste after each meal service or preparation'],
+          ['3','Request pickups','Create pickup requests to notify your waste partner'],
+          ['4','Track & export','View trends in Reports and export CSV for compliance'],
+        ].map(([n,t,d])=>`<div style="display:flex;gap:10px;margin-bottom:9px;align-items:flex-start">
+          <div style="width:20px;height:20px;background:#2A6348;color:#fff;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${n}</div>
+          <div><div style="font-size:11px;font-weight:600">${t}</div><div style="font-size:10px;color:#78746A">${d}</div></div>
+        </div>`).join('')}
+      </div>`);
+    el.appendChild(wc);
+    return; // Skip stats/chart when empty
+  }
+
+  // Stats
+  const stats=document.createElement('div'); stats.className='stat-row';
+  if(role==='Partner'){
+    const comp=DB.pickups.filter(p=>p.status==='Completed').length;
+    const collKg=DB.pickups.filter(p=>p.status==='Completed').reduce((s,p)=>s+Number(p.estKg),0);
+    stats.innerHTML=`<div class="sbox"><div class="n c-orange">${pending}</div><div class="l">${t('newRequests')||'New Requests'}</div></div>
+    <div class="sbox"><div class="n c-green">${comp}</div><div class="l">${t('completed')||'Completed'}</div></div>
+    <div class="sbox"><div class="n c-blue">${collKg}</div><div class="l">${t('kgCollected')||'kg Collected'}</div></div>`;
+  } else {
+    stats.innerHTML=`<div class="sbox"><div class="n ${todayKg>150?'c-red':'c-orange'}">${todayKg}</div><div class="l">${t('kgToday')||'kg Today'}</div></div>
+    <div class="sbox"><div class="n c-green">${todayE.length}</div><div class="l">${t('entToday')||'Entries Today'}</div></div>
+    <div class="sbox"><div class="n ${pending>0?'c-orange':'c-green'}">${pending}</div><div class="l">${t('pendPU')||'Pending Pickups'}</div></div>`;
+  }
+  el.appendChild(stats);
+
+  // Chart
+  if(role!=='Partner'){
+    const cc=makeCard(''); cc.innerHTML='<div class="card-hd">📈 Weekly Waste Trend (kg)</div>';
+    cc.appendChild(buildBarChart(weekChart(DB.entries)));
+    cc.innerHTML+=`<div style="font-size:10px;color:#78746A;margin-top:4px">Total this week: <strong>${weekKg.toFixed(1)} kg</strong> · ${weekE.length} entries</div>`;
+    el.appendChild(cc);
+
+    // Per-category analytics
+    const cats = DB.categories || ['Meat / Protein','Rice / Grains','Vegetables','Prepared Meals','Dairy','Bread / Bakery','Plate Waste','Mixed / Other'];
+    const catColors = ['#2A6348','#C4672F','#2563EB','#6D28D9','#B07D10','#B83025','#0891B2','#78746A'];
+    const catData = cats.map((c,i)=>({label:c, value:weekE.filter(e=>e.category===c||e.category.includes(c.split('/')[0].trim())).reduce((s,e)=>s+Number(e.kg),0), color:catColors[i%catColors.length]})).filter(d=>d.value>0);
+    const depts = DB.departments || ['Kitchen A','Kitchen B','Ward B','Ward C (ICU)','Storage','Staff Canteen'];
+    const deptData = depts.map((d,i)=>({label:d, value:weekE.filter(e=>e.dept===d).reduce((s,e)=>s+Number(e.kg),0), color:catColors[i%catColors.length]})).filter(d=>d.value>0);
+
+    const analyticsRow = document.createElement('div');
+    analyticsRow.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px';
+
+    const catCard = makeCard('');
+    catCard.innerHTML='<div class="card-hd">By Category (this week)</div>';
+    if(catData.length) {
+      catCard.innerHTML+=`<div style="display:flex;gap:16px;align-items:center">
+        <div style="flex-shrink:0">${buildDonutChart(catData)}</div>
+        <div style="flex:1;min-width:0">
+          ${catData.slice(0,5).map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px">
+            <div style="width:9px;height:9px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+            <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.label.split('/')[0]}</span>
+            <strong>${d.value.toFixed(1)} kg</strong></div>`).join('')}
+        </div></div>`;
+    } else {
+      catCard.innerHTML+='<div style="font-size:11px;color:#78746A;text-align:center;padding:20px 0">No data this week</div>';
+    }
+
+    const deptCard = makeCard('');
+    deptCard.innerHTML='<div class="card-hd">By Department (this week)</div>';
+    if(deptData.length) {
+      deptCard.innerHTML+=`<div style="padding:4px 0">${buildHBarChart(deptData)}</div>`;
+    } else {
+      deptCard.innerHTML+='<div style="font-size:11px;color:#78746A;text-align:center;padding:20px 0">No data this week</div>';
+    }
+
+    analyticsRow.appendChild(catCard);
+    analyticsRow.appendChild(deptCard);
+    el.appendChild(analyticsRow);
+
+    // Cost summary
+    const totalCost = weekE.reduce((s,e)=>s+Number(e.totalCost||0),0);
+    const currency = DB.settings?.currency||'SAR';
+    if(totalCost > 0) {
+      const costCard = makeCard('');
+      costCard.innerHTML=`<div class="card-hd">💰 Cost Summary (this week)</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+          <div class="sbox"><div class="n c-red" style="font-size:18px">${totalCost.toFixed(0)}</div><div class="l">${currency} Total Waste Cost</div></div>
+          <div class="sbox"><div class="n c-orange" style="font-size:18px">${weekE.length>0?(totalCost/weekE.length).toFixed(0):0}</div><div class="l">${currency} Avg per Entry</div></div>
+          <div class="sbox"><div class="n c-blue" style="font-size:18px">${weekKg>0?(totalCost/weekKg).toFixed(1):0}</div><div class="l">${currency} per kg</div></div>
+        </div>`;
+      el.appendChild(costCard);
+    }
+  }
+
+  // Alerts
+  const ac=makeCard(''); ac.innerHTML='<div class="card-hd">⚠️ Active Alerts</div>';
+  const wardBKg=DB.entries.filter(e=>e.dept==='Ward B'&&e.date===todayStr).reduce((s,e)=>s+Number(e.kg),0);
+  if(wardBKg>20) ac.innerHTML+=`<div class="alert alert-red"><span style="flex-shrink:0">🔴</span><div><strong>High waste in Ward B</strong> — ${wardBKg} kg today</div></div>`;
+  if(pending>0) ac.innerHTML+=`<div class="alert alert-yellow"><span style="flex-shrink:0">🟠</span><div><strong>${pending} pickup${pending>1?'s':''} awaiting confirmation</strong> — Check partner coordination</div></div>`;
+  ac.innerHTML+=`<div class="alert alert-green"><span style="flex-shrink:0">🟢</span><div><strong>System healthy</strong> — All data synced</div></div>`;
+  el.appendChild(ac);
+
+  // Recent
+  if(role!=='Partner'){
+    const rc=makeCard('');
+    rc.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h2 style="font-size:14px;font-weight:600">${t('recent')||'Recent Entries'}</h2><span class="tag tag-green"><span class="live-dot" style="width:5px;height:5px;margin-right:3px"></span>Live</span></div>`;
+    const recent=[...DB.entries].sort((a,b)=>b.id-a.id).slice(0,4);
+    if(!recent.length) rc.innerHTML+=`<div style="text-align:center;padding:28px 12px">
+      <div style="font-size:32px;margin-bottom:10px">📋</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">No waste entries yet</div>
+      <div style="font-size:11px;color:#78746A;margin-bottom:14px">Start logging food waste to see data here.</div>
+      ${currentUser.role==='Staff'?`<button class="btn btn-p btn-sm" onclick="navigate('log')">＋ Log First Entry</button>`:'<div style="font-size:11px;color:#78746A">Ask staff to log waste entries.</div>'}
+    </div>`;
+    recent.forEach(e=>{ rc.innerHTML+=`<div class="li"><div class="li-l"><div class="li-ic">${CAT_ICONS[e.category]||'🗑️'}</div><div><div class="li-title">${e.dept} — ${e.category}</div><div class="li-sub">${e.date} ${e.time} · ${e.reason}</div></div></div><strong style="font-size:13px;flex-shrink:0;margin-left:8px">${e.kg} kg</strong></div>`; });
+    el.appendChild(rc);
+  }
+
+  // Quick actions
+  if(role==='Staff'){
+    const qa=document.createElement('div'); qa.className='btn-2col'; qa.style.marginTop='4px';
+    qa.innerHTML=`<button class="btn btn-p btn-full" onclick="navigate('log')">${t('logWaste')||'＋ Log Waste'}</button><button class="btn btn-o btn-full" onclick="navigate('partner')">${t('requestPickup')||'🚛 Request Pickup'}</button>`;
+    el.appendChild(qa);
+  }
+  if(role==='Manager') {
+    const qa=document.createElement('button'); qa.className='btn btn-p btn-full'; qa.textContent='View Full Reports →'; qa.onclick=()=>navigate('reports');
+    el.appendChild(qa);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  LOG WASTE
+// ══════════════════════════════════════════════════════
+function resetLogForm() { logStep=1; logForm={dept:(DB.departments||['Kitchen A'])[0],category:'',kg:'',stage:'Production (cooking surplus)',reason:'Overproduction',notes:'',pickup:false,shift:'Morning (06:00–14:00)',date:today(0),time:nowTime(),costPerKg:DB.settings?.defaultCostPerKg||5,totalCost:0,produced:''}; }
+
+function renderLog(el) {
+  if(logStep===1&&!logForm.dept) resetLogForm();
+  el.innerHTML=`<div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:3px">${t('logWasteTitle')||'Log Food Waste'}</div>
+  <div style="font-size:11px;color:#78746A;margin-bottom:18px">${logForm.dept||'Kitchen A'} · ${new Date().toLocaleDateString('en-GB')} · ${new Date().toTimeString().slice(0,5)}</div>`;
+  // Steps indicator
+  const sd=document.createElement('div'); sd.className='steps';
+  for(let i=1;i<=3;i++){
+    const dot=document.createElement('div');
+    dot.className='step-dot '+(i<logStep||logStep===3?'done':i===logStep?'active':'pending');
+    dot.textContent=i<logStep||logStep===3?'✓':i; sd.appendChild(dot);
+    if(i<3){const l=document.createElement('div');l.className='step-line '+(i<logStep||logStep===3?'done':'pending');sd.appendChild(l);}
+  }
+  el.appendChild(sd);
+  if(logStep===1) renderLogStep1(el);
+  else if(logStep===2) renderLogStep2(el);
+  else renderLogSuccess(el);
+}
+
+function renderLogStep1(el){
+  const depts = DB.departments || ['Kitchen A','Kitchen B','Ward B','Ward C (ICU)','Storage','Staff Canteen'];
+  const cats = DB.categories || ['Meat / Protein','Rice / Grains','Vegetables','Prepared Meals','Dairy','Bread / Bakery','Plate Waste','Mixed / Other'];
+  const catIcons = {'Meat / Protein':'🍖','Rice / Grains':'🍚','Vegetables':'🥗','Prepared Meals':'🍲','Dairy':'🥛','Bread / Bakery':'🍞','Plate Waste':'🍽️','Mixed / Other':'🗑️'};
+  const defaultCost = DB.settings?.defaultCostPerKg || 5;
+  const currency = DB.settings?.currency || 'SAR';
+  const c=makeCard(`<div class="card-hd">${t('logStep1')||'Step 1 — Waste Details'}</div>
+  <div class="fc-2">
+    <div class="fg"><label class="fl">Department <span style="color:#B83025">*</span></label>
+      <select class="fc" id="lf-dept">${depts.map(d=>`<option${logForm.dept===d?' selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Shift</label>
+      <select class="fc" id="lf-shift">
+        <option${logForm.shift==='Morning (06:00–14:00)'?' selected':''}>Morning (06:00–14:00)</option>
+        <option${logForm.shift==='Afternoon (14:00–22:00)'?' selected':''}>Afternoon (14:00–22:00)</option>
+        <option${logForm.shift==='Night (22:00–06:00)'?' selected':''}>Night (22:00–06:00)</option>
+      </select></div>
+  </div>
+  <div class="fc-2">
+    <div class="fg"><label class="fl">Date <span style="color:#B83025">*</span></label>
+      <input class="fc" id="lf-date" type="date" value="${logForm.date||today(0)}" max="${today(0)}"></div>
+    <div class="fg"><label class="fl">Time</label>
+      <input class="fc" id="lf-time" type="time" value="${logForm.time||nowTime()}"></div>
+  </div>
+  <div class="fc-2">
+    <div class="fg"><label class="fl">Category <span style="color:#B83025">*</span></label>
+      <select class="fc" id="lf-cat"><option value="">Select…</option>${cats.map(c=>`<option${logForm.category===c?' selected':''}>${catIcons[c]||'🗑️'} ${c}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Amount (kg) <span style="color:#B83025">*</span></label>
+      <input class="fc" id="lf-kg" type="number" placeholder="e.g. 12.5" min="0.1" step="0.5" value="${logForm.kg||''}" oninput="updateCostCalc()"></div>
+  </div>
+  <div class="fc-2">
+    <div class="fg"><label class="fl">Cost per kg (${currency})</label>
+      <input class="fc" id="lf-cost" type="number" placeholder="${defaultCost}" step="0.5" min="0" value="${logForm.costPerKg||defaultCost}" oninput="updateCostCalc()"></div>
+    <div class="fg"><label class="fl">Estimated Total Cost</label>
+      <input class="fc readonly" id="lf-total-cost" readonly value="—"></div>
+  </div>
+  <div class="fg"><label class="fl">Stage of Generation</label>
+    <select class="fc" id="lf-stage">${['Preparation (trimming/peeling)','Production (cooking surplus)','Service (unserved meals)','Patient Return (plate waste)','Storage / Expired'].map(s=>`<option${logForm.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+  <div class="fg"><label class="fl">Production Amount (kg) <span style="font-size:10px;color:#78746A">(optional)</span></label>
+    <input class="fc" id="lf-produced" type="number" placeholder="Total produced this shift" step="0.5" min="0" value="${logForm.produced||''}"></div>`);
+  el.appendChild(c);
+
+  // Auto-calc cost on load
+  setTimeout(updateCostCalc, 50);
+
+  const b=document.createElement('button'); b.className='btn btn-p btn-full'; b.textContent='Continue →';
+  b.onclick=()=>{
+    logForm.dept=document.getElementById('lf-dept').value;
+    logForm.shift=document.getElementById('lf-shift').value;
+    logForm.date=document.getElementById('lf-date').value||today(0);
+    logForm.time=document.getElementById('lf-time').value||nowTime();
+    logForm.category=document.getElementById('lf-cat').value;
+    logForm.kg=document.getElementById('lf-kg').value;
+    logForm.costPerKg=Number(document.getElementById('lf-cost').value||defaultCost);
+    logForm.totalCost=(Number(logForm.kg||0)*logForm.costPerKg).toFixed(2);
+    logForm.stage=document.getElementById('lf-stage').value;
+    logForm.produced=document.getElementById('lf-produced').value;
+    if(!logForm.category){toast('⚠️ Please select a waste category');shakeEl('lf-cat');return;}
+    if(!logForm.kg||Number(logForm.kg)<=0){toast('⚠️ Please enter a valid amount');shakeEl('lf-kg');return;}
+    logStep=2; navigate('log');
+  };
+  el.appendChild(b);
+}
+
+function updateCostCalc() {
+  const kg = Number(document.getElementById('lf-kg')?.value||0);
+  const cost = Number(document.getElementById('lf-cost')?.value||0);
+  const total = document.getElementById('lf-total-cost');
+  const currency = DB.settings?.currency || 'SAR';
+  if (total) total.value = kg > 0 && cost > 0 ? `${(kg*cost).toFixed(2)} ${currency}` : '—';
+}
+
+function renderLogStep2(el){
+  const c=makeCard(`<div class="card-hd">${t('logStep2')||'Step 2 — Reason & Notes'}</div>
+  <div class="fg"><label class="fl">Primary Reason</label>
+    <select class="fc" id="lf-reason">${['Overproduction','Patient discharge / diet change','Expired / past best before','Unserved meals','Preparation waste','Other'].map(r=>`<option${logForm.reason===r?' selected':''}>${r}</option>`).join('')}</select></div>
+  <div class="fg"><label class="fl">Notes (optional)</label>
+    <textarea class="fc" id="lf-notes" rows="3" placeholder="e.g. Unexpected patient discharges…">${logForm.notes||''}</textarea></div>
+  <div class="fg"><label class="fl">Request partner pickup?</label>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-sm ${logForm.pickup?'btn-p':'btn-o'}" id="pu-yes" onclick="logForm.pickup=true;document.getElementById('pu-yes').className='btn btn-sm btn-p';document.getElementById('pu-no').className='btn btn-sm btn-o'">✓ Yes</button>
+      <button class="btn btn-sm ${!logForm.pickup?'btn-p':'btn-o'}" id="pu-no" onclick="logForm.pickup=false;document.getElementById('pu-no').className='btn btn-sm btn-p';document.getElementById('pu-yes').className='btn btn-sm btn-o'">✗ Internal disposal</button>
+    </div></div>`);
+  el.appendChild(c);
+  const btns=document.createElement('div'); btns.className='btn-2col';
+  btns.innerHTML=`<button class="btn btn-o btn-full" onclick="logStep=1;navigate('log')">← Back</button>`;
+  const sb=document.createElement('button'); sb.className='btn btn-p btn-full'; sb.textContent='Submit Entry ✓';
+  sb.onclick=()=>{
+    logForm.reason=document.getElementById('lf-reason')?.value||logForm.reason;
+    logForm.notes=document.getElementById('lf-notes')?.value||'';
+    const cat = logForm.category.replace(/^[^\u0000-\u007F]+\s*/,'').trim();
+    const entry={id:DB.nextId++,dept:logForm.dept,shift:logForm.shift,category:cat,kg:Number(logForm.kg),costPerKg:logForm.costPerKg||0,totalCost:logForm.totalCost||0,produced:Number(logForm.produced)||0,stage:logForm.stage,reason:logForm.reason,notes:logForm.notes,pickup:logForm.pickup,date:logForm.date||today(0),time:logForm.time||nowTime(),user:currentUser.name};
+    DB.entries.unshift(entry);
+    addAuditLog(`Waste logged: ${entry.kg}kg ${entry.category} — ${entry.dept}`);
+    saveDB(DB);
+    logStep=3; navigate('log');
+    toast('✅ Entry saved!');
+    showSyncBar('✓ Entry synced',false);
+  };
+  btns.appendChild(sb); el.appendChild(btns);
+}
+
+function renderLogSuccess(el){
+  const e=DB.entries[0];
+  const c=makeCard(`<div style="text-align:center;padding:24px 12px 16px">
+    <div style="width:60px;height:60px;background:#E4F2EB;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px">✅</div>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:6px">Waste Logged Successfully</h3>
+    <p style="font-size:12px;color:#78746A;line-height:1.7"><strong>${e?.kg} kg</strong> of <strong>${e?.category}</strong> from <strong>${e?.dept}</strong> at ${e?.time}.${logForm.pickup?' Pickup request sent to GreenCo.':''}</p></div>
+    <div style="background:#EDEBE5;border-radius:9px;padding:12px 14px;margin:4px 0 8px">
+      <div style="font-size:10px;color:#78746A;font-weight:700;margin-bottom:8px">ENTRY SUMMARY</div>
+      ${[
+        ['Department',e?.dept],
+        ['Shift',e?.shift||'—'],
+        ['Category',e?.category],
+        ['Amount',e?.kg+' kg'],
+        e?.produced?['Production',e.produced+' kg']:null,
+        e?.totalCost?['Total Cost',e.totalCost+' '+(DB.settings?.currency||'SAR')]:null,
+        ['Stage',e?.stage],
+        ['Reason',e?.reason],
+        ['Logged by',e?.user],
+        ['Date & Time',e?.date+' '+e?.time]
+      ].filter(Boolean).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:#78746A">${k}</span><strong>${v}</strong></div>`).join('')}
+    </div>`);
+  el.appendChild(c);
+  const b=document.createElement('button'); b.className='btn btn-p btn-full'; b.textContent='＋ Log Another Entry';
+  b.onclick=()=>{resetLogForm();navigate('log');}; el.appendChild(b);
+}
+
+// ══════════════════════════════════════════════════════
+//  REPORTS
+// ══════════════════════════════════════════════════════
+function renderReports(el){
+  el.innerHTML=`<div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:3px">Reports</div>
+  <div style="font-size:11px;color:#78746A;margin-bottom:18px">${t('reportsSub')||'Waste data & compliance exports'}</div>`;
+  const allDepts=['All',...new Set(DB.entries.map(e=>e.dept))];
+  const allCats=['All',...new Set(DB.entries.map(e=>e.category))];
+  const fc=makeCard(`<div class="card-hd">Filters</div>
+  <div class="fc-2">
+    <div class="fg"><label class="fl">Date Range</label><select class="fc" onchange="reportFilters.range=this.value;navigate('reports')">${['This Week','This Month','All Time'].map(r=>`<option${reportFilters.range===r?' selected':''}>${r}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Department</label><select class="fc" onchange="reportFilters.dept=this.value;navigate('reports')">${allDepts.map(d=>`<option${reportFilters.dept===d?' selected':''}>${d}</option>`).join('')}</select></div>
+  </div>
+  <div class="fg"><label class="fl">Category</label><select class="fc" onchange="reportFilters.cat=this.value;navigate('reports')">${allCats.map(c=>`<option${reportFilters.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>`);
+  el.appendChild(fc);
+
+  const filtered=getFiltered();
+  const totalKg=filtered.reduce((s,e)=>s+Number(e.kg),0);
+  const deptTop=[...new Set(DB.entries.map(e=>e.dept))].map(d=>({d,v:filtered.filter(e=>e.dept===d).reduce((s,e)=>s+Number(e.kg),0)})).sort((a,b)=>b.v-a.v)[0];
+  const catTop=[...new Set(DB.entries.map(e=>e.category))].map(c=>({c,v:filtered.filter(e=>e.category===c).reduce((s,e)=>s+Number(e.kg),0)})).sort((a,b)=>b.v-a.v)[0];
+
+  const reportCurrency=DB.settings?.currency||'SAR';
+  const totalCostFiltered=filtered.reduce((s,e)=>s+Number(e.totalCost||0),0);
+  const sr=document.createElement('div'); sr.className='stat-row';
+  sr.innerHTML=`<div class="sbox"><div class="n c-red">${totalKg.toFixed(0)}</div><div class="l">Total kg</div></div>
+  <div class="sbox"><div class="n c-orange" style="font-size:15px">${totalCostFiltered.toFixed(0)}</div><div class="l">Total Cost (${reportCurrency})</div></div>
+  <div class="sbox"><div class="n c-green" style="font-size:13px">${(deptTop?.d||'—').split(' ').slice(0,2).join(' ')}</div><div class="l">Top Dept</div></div>
+  <div class="sbox"><div class="n c-blue" style="font-size:13px">${(catTop?.c||'—').split(' / ')[0].trim()}</div><div class="l">Top Category</div></div>`;
+  el.style.cssText='';
+  sr.className=''; sr.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px';
+  el.appendChild(sr);
+
+  const cc=makeCard(''); cc.innerHTML='<div class="card-hd">Weekly Chart (kg)</div>';
+  cc.appendChild(buildBarChart(weekChart(filtered)));
+  cc.innerHTML+=`<div style="font-size:10px;color:#78746A;margin-top:4px">${filtered.length} entries · ${totalKg.toFixed(1)} kg</div>`;
+  el.appendChild(cc);
+
+  const sorted=[...filtered].sort((a,b)=>{let av=a[sortCol],bv=b[sortCol];if(sortCol==='kg'){av=Number(av);bv=Number(bv);}return sortDir==='asc'?(av>bv?1:-1):(av<bv?1:-1);});
+  const tc=makeCard('');
+  tc.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h2 style="font-size:14px;font-weight:600">Waste Log Table</h2><span class="tag tag-gray">${filtered.length} entries</span></div>`;
+  const wrap=document.createElement('div'); wrap.style.overflowX='auto';
+  const currency=DB.settings?.currency||'SAR';
+  wrap.innerHTML=`<table class="dt"><thead><tr>${[['date','Date'],['dept','Dept'],['shift','Shift'],['category','Category'],['kg','kg'],['totalCost','Cost ('+currency+')'],['reason','Reason']].map(([k,l])=>`<th onclick="sortCol='${k}';sortDir=sortDir==='asc'?'desc':'asc';navigate('reports')">${l}${sortCol===k?(sortDir==='asc'?' ↑':' ↓'):''}</th>`).join('')}<th>User</th></tr></thead>
+  <tbody>${sorted.slice(0,20).map(e=>`<tr><td style="font-family:monospace;font-size:10px">${e.date.slice(5)} ${e.time}</td><td>${(e.dept||'').split(' ').slice(0,2).join(' ')}</td><td style="font-size:10px;color:#78746A">${e.shift||'—'}</td><td>${e.category}</td><td style="font-weight:700">${e.kg}</td><td style="color:#C4672F;font-weight:600">${e.totalCost?Number(e.totalCost).toFixed(1):'—'}</td><td style="color:#78746A">${e.reason}</td><td style="color:#78746A">${e.user}</td></tr>`).join('')}
+  ${!filtered.length?'<tr><td colspan="8" style="text-align:center;padding:20px;color:#78746A">No entries match filters</td></tr>':''}</tbody></table>`;
+  tc.appendChild(wrap);
+  if(filtered.length>15) tc.innerHTML+=`<div style="font-size:10px;color:#78746A;text-align:center;margin-top:8px">Showing 15 of ${filtered.length}</div>`;
+  el.appendChild(tc);
+
+  const exp=document.createElement('div'); exp.className='btn-2col';
+  exp.innerHTML=`<button class="btn btn-p btn-full" onclick="exportCSV()">${t('exportCSV')||'⬇ Export CSV'}</button><button class="btn btn-o btn-full" onclick="window.print()">🖨️ Print</button>`;
+  el.appendChild(exp);
+}
+
+function exportCSV(){
+  const f=getFiltered();
+  const expCurrency=DB.settings?.currency||'SAR';
+  const rows=f.map(e=>[e.date,e.time,e.dept,e.shift||'',e.category,e.kg,e.produced||'',e.costPerKg||'',e.totalCost||'',e.stage,e.reason,e.notes,e.user].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv=`Date,Time,Department,Shift,Category,kg,Production kg,Cost/kg (${expCurrency}),Total Cost (${expCurrency}),Stage,Reason,Notes,User\n`+rows.join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='RePlate_WasteLog_'+today(0)+'.csv'; a.click();
+  toast('📊 CSV exported!');
+  addAuditLog('CSV export by '+currentUser.name);
+}
+
+// ══════════════════════════════════════════════════════
+//  PARTNER
+// ══════════════════════════════════════════════════════
+function renderPartner(el){
+  if(currentUser.role==='Partner'){
+    el.innerHTML=`<div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:3px">Pickup Requests</div><div style="font-size:11px;color:#78746A;margin-bottom:18px">View &amp; update hospital pickup requests</div>`;
+    const hosp = DB.hospital || {};
+    const c=makeCard(`<div class="card-hd">Incoming Requests — ${hosp.name||'Hospital'}</div>
+      <div style="background:#E4F2EB;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px">
+        <div style="font-weight:700;color:#2A6348;margin-bottom:4px">🏥 Hospital Details</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div><span style="color:#78746A">Name:</span> <strong>${hosp.name||'—'}</strong></div>
+          <div><span style="color:#78746A">City:</span> <strong>${hosp.city||'—'}</strong></div>
+          <div><span style="color:#78746A">Contact:</span> <strong>${hosp.email||'—'}</strong></div>
+          <div><span style="color:#78746A">Phone:</span> <strong>${hosp.phone||'—'}</strong></div>
+        </div>
+      </div>`);
+    if(!DB.pickups.length) c.innerHTML+=`<div style="text-align:center;padding:28px 12px">
+      <div style="font-size:32px;margin-bottom:10px">🚛</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">No pickup requests yet</div>
+      <div style="font-size:11px;color:#78746A">The hospital hasn't submitted any requests. Check back soon.</div>
+    </div>`;
+    DB.pickups.forEach(p=>{
+      const hosp2 = DB.hospital || {};
+      c.innerHTML+=`<div style="border:1px solid #DDD8CE;border-radius:9px;padding:0;margin-bottom:8px;overflow:hidden">
+        <div onclick="togglePickupDetail('pd-${p.id}')" style="padding:12px;cursor:pointer;background:#F7F5F0;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:700;font-size:12px;margin-bottom:2px">📦 Order ${p.id}</div>
+            <div style="font-size:10px;color:#78746A">${p.date} · ${p.estKg} kg · ${p.type}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${tag(p.status,statusColor(p.status))}
+            <span style="font-size:11px;color:#78746A">▼</span>
+          </div>
+        </div>
+        <div id="pd-${p.id}" style="display:none;padding:12px;border-top:1px solid #DDD8CE">
+          <div style="background:#E4F2EB;border-radius:7px;padding:9px 11px;margin-bottom:10px;font-size:11px">
+            <div style="font-weight:700;color:#2A6348;margin-bottom:5px">🏥 Hospital Information</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+              <div><span style="color:#78746A">Hospital:</span> <strong>${hosp2.name||'—'}</strong></div>
+              <div><span style="color:#78746A">City:</span> <strong>${hosp2.city||'—'}</strong></div>
+              <div><span style="color:#78746A">Contact:</span> <strong>${hosp2.email||'—'}</strong></div>
+              <div><span style="color:#78746A">Waste Type:</span> <strong>${p.type}</strong></div>
+              <div><span style="color:#78746A">Est. Weight:</span> <strong>${p.estKg} kg</strong></div>
+              <div><span style="color:#78746A">Request Date:</span> <strong>${p.date}</strong></div>
+            </div>
+            ${p.notes?`<div style="margin-top:6px"><span style="color:#78746A">Notes:</span> <strong>${p.notes}</strong></div>`:''}
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            ${p.status==='Pending'?`<button class="btn btn-p btn-sm" onclick="updPU('${p.id}','Approved')">✓ Accept Order</button><button class="btn btn-o btn-sm" onclick="updPU('${p.id}','Cancelled')">✗ Decline</button>`:''}
+            ${p.status==='Approved'?`<button class="btn btn-p btn-sm" onclick="updPU('${p.id}','En Route')">🚛 En Route — Picking Up</button>`:''}
+            ${p.status==='En Route'?`<button class="btn btn-p btn-sm" onclick="updPU('${p.id}','Completed')">✅ Mark Completed</button>`:''}
+            ${p.status==='Completed'?`<div style="font-size:11px;color:#2A6348;font-weight:600">✅ This order has been completed</div>`:''}
+            ${p.status==='Cancelled'?`<div style="font-size:11px;color:#B83025;font-weight:600">✗ This order was cancelled</div>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+    // Partner Reports card
+    const repCard = makeCard('');
+    const myPickups = DB.pickups || [];
+    const completed = myPickups.filter(p=>p.status==='Completed');
+    const totalKg = completed.reduce((s,p)=>s+Number(p.estKg||0),0);
+    repCard.innerHTML = `<div class="card-hd">📊 My Reports</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px">
+        <div class="sbox"><div class="n" style="color:#2A6348;font-size:20px">${myPickups.length}</div><div class="l">Total Requests</div></div>
+        <div class="sbox"><div class="n" style="color:#C4672F;font-size:20px">${myPickups.filter(p=>p.status==='Pending').length}</div><div class="l">Pending</div></div>
+        <div class="sbox"><div class="n" style="color:#2563EB;font-size:20px">${completed.length}</div><div class="l">${t('completed')||'Completed'}</div></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">Pickup History</div>
+      ${completed.length===0?'<div style="text-align:center;padding:14px;font-size:11px;color:#78746A">No completed pickups yet</div>':
+        completed.slice(0,5).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F0EDE8;font-size:11px">
+          <div><strong>${p.id}</strong> · ${p.type}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#78746A">${p.date}</span>
+            <strong>${p.estKg} kg</strong>
+            <span style="font-size:9px;font-weight:700;background:#E4F2EB;color:#2A6348;padding:2px 7px;border-radius:10px">Completed</span>
+          </div>
+        </div>`).join('')
+      }
+      ${completed.length>0?`<div style="margin-top:10px;text-align:right;font-size:11px;color:#78746A">Total kg collected: <strong style="color:#2A6348">${totalKg} kg</strong></div>`:''}`;
+    el.appendChild(repCard);
+  } else {
+    el.innerHTML=`<div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:3px">${t('partnerTitle')||'Partner Coordination'}</div><div style="font-size:11px;color:#78746A;margin-bottom:18px">${t('partnerSub')||'Manage pickup requests'}</div>`;
+    const c=makeCard('');
+    c.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h2 style="font-size:14px;font-weight:600">${t('pickupRequests')||'Pickup Requests'}</h2><button class="btn btn-p btn-sm" onclick="openModal('overlay-pickup')">${t('createPickup')||'＋ New Request'}</button></div>`;
+    if(!DB.pickups.length) c.innerHTML+=`<div style="text-align:center;padding:28px 12px">
+      <div style="font-size:32px;margin-bottom:10px">🚛</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">No pickup requests yet</div>
+      <div style="font-size:11px;color:#78746A;margin-bottom:14px">Create a request to notify your waste partner.</div>
+      <button class="btn btn-p btn-sm" onclick="openModal('overlay-pickup')">＋ Create First Request</button>
+    </div>`;
+    DB.pickups.forEach(p=>{
+      const canCancel = (p.status === 'Pending');
+      c.innerHTML+=`<div style="padding:11px 0;border-bottom:1px solid #DFD9D0">
+        <div class="li" style="padding:0;border:none">
+          <div class="li-l">
+            <div class="li-ic">🚛</div>
+            <div>
+              <div class="li-title">${p.id} · ${p.partner}</div>
+              <div class="li-sub">${p.date} · ${p.estKg} kg · ${p.type}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${tag(p.status,statusColor(p.status))}
+            ${canCancel ? `<button class="btn btn-danger btn-sm" style="padding:4px 9px;font-size:10px" onclick="cancelSpecificPickup('${p.id}')">Cancel</button>` : ''}
+          </div>
+        </div>
+        ${p.notes ? `<div style="font-size:10px;color:#78746A;margin-top:4px;padding-left:43px">${p.notes}</div>` : ''}
+      </div>`;
+    });
+    el.appendChild(c);
+    const lastPartner = DB.pickups[0]?.partner || 'partner';
+    const nc=makeCard(`<div class="card-hd">📣 Notification Status</div>
+    <div class="alert alert-green"><span>🟢</span><div><strong>${lastPartner} last notified</strong> — Latest request sent. Awaiting confirmation.</div></div>
+    <div style="margin-top:8px">
+      <button class="btn btn-o btn-sm btn-full" onclick="toast('📧 Reminder sent to ${lastPartner}')">Send Reminder</button>
+    </div>`);
+    el.appendChild(nc);
+  }
+}
+
+function togglePickupDetail(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function updPU(id,status){
+  const p=DB.pickups.find(p=>p.id===id);
+  if(p){p.status=status;saveDB(DB);addAuditLog(`Pickup ${id} → ${status} by ${currentUser.name}`);}
+  navigate('partner'); toast(`Pickup ${id} updated to "${status}"`);
+}
+function cancelSpecificPickup(id) {
+  if (!confirm('Cancel pickup request ' + id + '? This cannot be undone.')) return;
+  const p = DB.pickups.find(p => p.id === id);
+  if (p) {
+    p.status = 'Cancelled';
+    saveDB(DB);
+    addAuditLog('Pickup ' + id + ' cancelled by ' + currentUser.name);
+    navigate('partner');
+    toast('Request ' + id + ' cancelled');
+  }
+}
+
+function cancelPending(){
+  const p=DB.pickups.find(p=>p.status==='Pending');
+  if(p){p.status='Cancelled';saveDB(DB);navigate('partner');toast('Request cancelled');}
+  else toast('No pending requests');
+}
+function submitPickup(){
+  const kg=document.getElementById('pu-kg').value;
+  if(!kg||Number(kg)<=0){toast('⚠️ Enter a valid weight');return;}
+  const id='R-'+(100+DB.pickups.length+1);
+  DB.pickups.unshift({id,partner:document.getElementById('pu-partner').value,estKg:Number(kg),type:document.getElementById('pu-type').value,date:document.getElementById('pu-date').value||today(0),status:'Pending',notes:document.getElementById('pu-notes').value});
+  saveDB(DB); addAuditLog(`Pickup request created: ${id}`);
+  closeModal('overlay-pickup'); navigate('partner'); toast(`🚛 Request ${id} sent to partner`);
+}
+
+// ══════════════════════════════════════════════════════
+//  ADMIN
+// ══════════════════════════════════════════════════════
+function renderAdmin(el){
+  const adminTab = window._adminTab || 'users';
+  window._adminTab = adminTab;
+  el.innerHTML=`
+  <div style="font-size:19px;font-weight:700;letter-spacing:-.4px;margin-bottom:2px">${t('adminTitle')||'Admin Panel'}</div>
+  <div style="font-size:11px;color:#78746A;margin-bottom:16px">Users, customization &amp; system settings</div>
+  <div style="display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid #EDEBE5;padding-bottom:0">
+    ${['users','departments','categories','partners','settings','security'].map(t=>`
+      <button onclick="window._adminTab='${t}';navigate('admin')" style="padding:8px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid ${adminTab===t?'#2A6348':'transparent'};margin-bottom:-2px;color:${adminTab===t?'#2A6348':'#78746A'}">
+        ${{users:'👥 Users',departments:'🏢 Departments',categories:'🗂️ Categories',partners:'🚛 Partners',settings:'⚙️ Settings',security:'🔒 Security'}[t]}
+      </button>`).join('')}
+  </div>`;
+
+  if(adminTab==='departments') { renderAdminDepts(el); return; }
+  if(adminTab==='categories')  { renderAdminCats(el); return; }
+  if(adminTab==='partners')    { renderAdminPartners(el); return; }
+  if(adminTab==='settings')    { renderAdminSettings(el); return; }
+  if(adminTab==='security')    { renderAdminSecurity(el); return; }
+  // Default: users tab
+
+  const pending = (DB.pendingUsers||[]).filter(u=>u.status==='Pending');
+  const sr=document.createElement('div');
+  sr.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px';
+  sr.innerHTML=`<div class="sbox"><div class="n c-green">${DB.users.filter(u=>u.status==='Active').length}</div><div class="l">Active Users</div></div>
+  <div class="sbox"><div class="n ${pending.length>0?'c-orange':'c-muted'}">${pending.length}</div><div class="l">Pending Requests</div></div>
+  <div class="sbox"><div class="n c-blue">${DB.entries.length}</div><div class="l">Total Entries</div></div>
+  <div class="sbox"><div class="n c-orange">${(DB.partners||[]).filter(p=>p.status==='Active').length}</div><div class="l">Active Partners</div></div>`;
+  el.appendChild(sr);
+
+  // ── PENDING ACCESS REQUESTS ──
+  if (pending.length > 0) {
+    const pc = makeCard('');
+    pc.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="font-size:14px;font-weight:600">🔔 Access Requests</h2>
+      <span class="tag tag-orange">${pending.length} pending</span></div>`;
+    pending.forEach(u => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:12px 0;border-bottom:1px solid #DFD9D0';
+      row.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-weight:600;font-size:13px">${u.name}</div>
+            <div style="font-size:10px;color:#78746A">${u.email}</div>
+            <div style="font-size:10px;color:#78746A;margin-top:2px">${u.org} · ${u.dept||'No dept'} · Requested: ${new Date(u.requestedAt).toLocaleDateString('en-GB')}</div>
+          </div>
+          ${tag(u.role, roleTagColor2(u.role))}
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-p btn-sm" onclick="approveUser(${u.id})">✓ Approve</button>
+          <button class="btn btn-o btn-sm" onclick="rejectUser(${u.id})" style="color:#B83025;border-color:#B83025">✗ Reject</button>
+        </div>`;
+      pc.appendChild(row);
+    });
+    el.appendChild(pc);
+  }
+
+  // User table
+  const uc=makeCard('');
+  uc.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h2 style="font-size:14px;font-weight:600">${t('usersTab')||'User Management'}</h2><button class="btn btn-p btn-sm" onclick="openAddUser()">＋ Add User</button></div>`;
+  const wrap=document.createElement('div'); wrap.style.overflowX='auto';
+  wrap.innerHTML=`<table class="dt"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Status</th><th></th></tr></thead>
+  <tbody>${DB.users.map(u=>`<tr>
+    <td style="font-weight:600">${u.name}</td>
+    <td style="color:#78746A;font-size:10px">${u.email}</td>
+    <td>${tag(u.role,roleTagColor2(u.role))}</td>
+    <td style="color:#78746A">${u.dept||'—'}</td>
+    <td><span style="font-size:11px;font-weight:600;color:${u.status==='Active'?'#2A6348':'#78746A'}">${u.status}</span></td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn-ghost" onclick="openEditUser(${u.id})">Edit</button>
+      ${u.id!==currentUser.id?`<button class="btn-ghost" style="color:${u.status==='Active'?'#B83025':'#2A6348'}" onclick="toggleUserStatus(${u.id})">${u.status==='Active'?'Disable':'Enable'}</button>`:''}
+      
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+  uc.appendChild(wrap); el.appendChild(uc);
+
+}
+
+// ══ ADMIN DEPARTMENTS ══
+function renderAdminDepts(el) {
+  const depts = DB.departments || [];
+  const c = makeCard('');
+  c.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h2 style="font-size:14px;font-weight:600">Departments</h2>
+    <button class="btn btn-p btn-sm" onclick="addDept()">＋ Add Department</button></div>
+    <div id="dept-list">${depts.map((d,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #DFD9D0">
+        <span style="font-size:13px">🏢 ${d}</span>
+        <button class="btn-ghost" style="color:#B83025" onclick="removeDept(${i})">Remove</button>
+      </div>`).join('')}</div>`;
+  el.appendChild(c);
+}
+function addDept(){
+  const name = prompt('Enter new department name:','');
+  if(!name||!name.trim()) return;
+  if(!DB.departments) DB.departments=[];
+  if(DB.departments.includes(name.trim())){toast('Department already exists');return;}
+  DB.departments.push(name.trim());
+  saveDB(DB); addAuditLog('Department added: '+name.trim()); navigate('admin'); toast('✅ Department added');
+}
+function removeDept(i){
+  if(!confirm('Remove this department?')) return;
+  const d = DB.departments[i];
+  DB.departments.splice(i,1);
+  saveDB(DB); addAuditLog('Department removed: '+d); navigate('admin'); toast('Department removed');
+}
+
+// ══ ADMIN CATEGORIES ══
+function renderAdminCats(el) {
+  const cats = DB.categories || [];
+  const catColors=['#2A6348','#C4672F','#2563EB','#6D28D9','#B07D10','#B83025','#0891B2','#78746A'];
+  const c = makeCard('');
+  c.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h2 style="font-size:14px;font-weight:600">Waste Categories</h2>
+    <button class="btn btn-p btn-sm" onclick="addCat()">＋ Add Category</button></div>
+    ${cats.map((cat,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #DFD9D0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${catColors[i%catColors.length]}"></div>
+          <span style="font-size:13px">${cat}</span>
+        </div>
+        <button class="btn-ghost" style="color:#B83025" onclick="removeCat(${i})">Remove</button>
+      </div>`).join('')}`;
+  el.appendChild(c);
+}
+function addCat(){
+  const name = prompt('Enter new waste category name:','');
+  if(!name||!name.trim()) return;
+  if(!DB.categories) DB.categories=[];
+  if(DB.categories.includes(name.trim())){toast('Category already exists');return;}
+  DB.categories.push(name.trim());
+  saveDB(DB); addAuditLog('Category added: '+name.trim()); navigate('admin'); toast('✅ Category added');
+}
+function removeCat(i){
+  if(!confirm('Remove this category?')) return;
+  const c = DB.categories[i];
+  DB.categories.splice(i,1);
+  saveDB(DB); addAuditLog('Category removed: '+c); navigate('admin'); toast('Category removed');
+}
+
+// ══ ADMIN PARTNERS ══
+function renderAdminPartners(el) {
+  const partners = DB.partners || [];
+  const c = makeCard('');
+  c.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h2 style="font-size:14px;font-weight:600">${t('partnersTab')||'Partner Organizations'}</h2>
+    <button class="btn btn-p btn-sm" onclick="openAddPartner()">＋ Add Partner</button></div>`;
+  if(!partners.length) {
+    c.innerHTML+=`<div style="text-align:center;padding:28px 12px">
+      <div style="font-size:32px;margin-bottom:10px">🏢</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">No partners yet</div>
+      <div style="font-size:11px;color:#78746A;margin-bottom:14px">Add your waste management partners.</div>
+      <button class="btn btn-p btn-sm" onclick="openAddPartner()">＋ Add First Partner</button></div>`;
+  } else {
+    const wrap=document.createElement('div'); wrap.style.overflowX='auto';
+    wrap.innerHTML=`<table class="dt"><thead><tr><th>Company</th><th>Contact</th><th>Phone</th><th>City</th><th>CR No.</th><th>Status</th><th></th></tr></thead>
+    <tbody>${partners.map(p=>`<tr>
+      <td style="font-weight:600">${p.name}</td>
+      <td>${p.contact||'—'}</td>
+      <td style="font-family:monospace;font-size:11px">${p.phone||'—'}</td>
+      <td style="color:#78746A">${p.city||'—'}</td>
+      <td style="font-family:monospace;font-size:10px;color:#78746A">${p.cr||'—'}</td>
+      <td>${tag(p.status||'Active',p.status==='Active'?'green':'gray')}</td>
+      <td><button class="btn-ghost" onclick="openEditPartner('${p.id}')">Edit</button></td>
+    </tr>`).join('')}</tbody></table>`;
+    c.appendChild(wrap);
+  }
+  el.appendChild(c);
+}
+
+function openAddPartner(){
+  document.getElementById('pf-title').textContent='Add Partner Organization';
+  document.getElementById('pf-id').value='';
+  ['pf-name','pf-contact','pf-phone','pf-email','pf-city','pf-address','pf-cr','pf-iban','pf-types'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pf-status').value='Active';
+  document.getElementById('pf-err').classList.remove('show');
+  openModal('overlay-partner-form');
+}
+
+function openEditPartner(id){
+  const p=(DB.partners||[]).find(p=>p.id===id); if(!p)return;
+  document.getElementById('pf-title').textContent='Edit Partner — '+p.name;
+  document.getElementById('pf-id').value=p.id;
+  document.getElementById('pf-name').value=p.name||'';
+  document.getElementById('pf-contact').value=p.contact||'';
+  document.getElementById('pf-phone').value=p.phone||'';
+  document.getElementById('pf-email').value=p.email||'';
+  document.getElementById('pf-city').value=p.city||'';
+  document.getElementById('pf-address').value=p.address||'';
+  document.getElementById('pf-cr').value=p.cr||'';
+  document.getElementById('pf-iban').value=p.iban||'';
+  document.getElementById('pf-types').value=p.types||'';
+  document.getElementById('pf-status').value=p.status||'Active';
+  openModal('overlay-partner-form');
+}
+
+function savePartner(){
+  const err=document.getElementById('pf-err');
+  const name=document.getElementById('pf-name').value.trim();
+  const contact=document.getElementById('pf-contact').value.trim();
+  const phone=document.getElementById('pf-phone').value.trim();
+  if(!name){showErr(err,'Company name is required');return;}
+  const phoneVal = document.getElementById('pf-phone').value.trim();
+  if(phoneVal && phoneVal.replace(/[^0-9]/g,'').length > 12) { showErr(err,'⚠ Phone number is too long — please enter a valid number'); return; }
+  if(!contact){showErr(err,'Contact person is required');return;}
+  if(!phone){showErr(err,'Phone number is required');return;}
+  err.classList.remove('show');
+  if(!DB.partners) DB.partners=[];
+  const id=document.getElementById('pf-id').value;
+  const partnerData={name,contact,phone,email:document.getElementById('pf-email').value,city:document.getElementById('pf-city').value,address:document.getElementById('pf-address').value,cr:document.getElementById('pf-cr').value,iban:document.getElementById('pf-iban').value,types:document.getElementById('pf-types').value,status:document.getElementById('pf-status').value};
+  if(id){const p=DB.partners.find(p=>p.id===id);if(p)Object.assign(p,partnerData);}
+  else {DB.partners.push({...partnerData,id:'P-'+(DB.nextId++),createdAt:new Date().toISOString()});}
+  saveDB(DB); addAuditLog(`Partner ${id?'updated':'added'}: ${name}`);
+  closeModal('overlay-partner-form'); navigate('admin'); toast('✅ Partner saved');
+}
+
+// ══ ADMIN SETTINGS ══
+function renderAdminSettings(el){
+  const currency = DB.settings?.currency||'SAR';
+  const costPerKg = DB.settings?.defaultCostPerKg||5;
+  const c=makeCard('<div class="card-hd">System Settings</div>');
+  [['notifs','Real-time notifications','Alerts for waste threshold breaches'],
+   ['autoNotify','Partner auto-notification','Automatically notify partners'],
+   ['backup','Automated daily backup','02:00 AM server backup'],
+   ['audit','Audit log tracking','Record all actions for compliance']].forEach(([k,l,sub])=>{
+    const on=DB.settings[k];
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #DFD9D0';
+    row.innerHTML=`<div><div style="font-size:12px;font-weight:500">${l}</div><div style="font-size:10px;color:#78746A">${sub}</div></div>`;
+    const sw=document.createElement('button'); sw.className='sw'; sw.style.background=on?'#2A6348':'#DFD9D0';
+    sw.innerHTML=`<div class="sw-thumb" style="left:${on?19:2}px"></div>`;
+    sw.onclick=()=>{DB.settings[k]=!DB.settings[k];saveDB(DB);navigate('admin');toast('Setting updated');};
+    row.appendChild(sw); c.appendChild(row);
+  });
+  el.appendChild(c);
+
+  const costCard=makeCard(`<div class="card-hd">💰 Cost & Currency Settings</div>
+    <div class="fc-2">
+      <div class="fg"><label class="fl">Currency</label>
+        <select class="fc" id="set-currency" onchange="DB.settings.currency=this.value;saveDB(DB);toast('Currency updated')">
+          ${['SAR','USD','EUR','GBP','AED'].map(c=>`<option${c===currency?' selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div class="fg"><label class="fl">Default Cost per kg</label>
+        <div style="display:flex;gap:6px">
+          <input class="fc" id="set-cost" type="number" value="${costPerKg}" step="0.5" min="0" placeholder="5">
+          <button class="btn btn-p btn-sm" onclick="saveCostSetting()">Save</button>
+        </div></div>
+    </div>`);
+  el.appendChild(costCard);
+
+  const dz=makeCard(`<div class="card-hd" style="color:#B83025">⚠️ Danger Zone</div>
+    <div style="font-size:11px;color:#78746A;margin-bottom:10px">These actions are irreversible. Use with caution.</div>
+    <button class="btn btn-danger btn-full" onclick="if(confirm('Reset ALL data?'))resetAll()">🗑️ Reset All Data to Default</button>`);
+  el.appendChild(dz);
+}
+function saveCostSetting(){
+  const v=Number(document.getElementById('set-cost').value);
+  if(v<0){toast('⚠️ Invalid cost');return;}
+  DB.settings.defaultCostPerKg=v;
+  saveDB(DB); toast('✅ Default cost updated');
+}
+
+// ══ ADMIN SECURITY ══
+function renderAdminSecurity(el){
+  const al=makeCard('');
+  al.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h2 style="font-size:14px;font-weight:600">🔍 Audit Log</h2><span class="tag tag-gray">${DB.auditLog?.length||0} events</span></div>`;
+  const log=(DB.auditLog||[]).slice(0,20);
+  if(!log.length) al.innerHTML+='<div style="font-size:11px;color:#78746A;padding:10px 0">No events recorded yet</div>';
+  log.forEach(e=>{ al.innerHTML+=`<div style="padding:7px 0;border-bottom:1px solid #DFD9D0;font-size:11px">
+    <div style="display:flex;justify-content:space-between"><span>${e.action}</span><span style="color:#78746A;font-family:monospace;font-size:9px">${new Date(e.ts).toLocaleString('en-GB',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'})}</span></div>
+    <div style="font-size:10px;color:#78746A">${e.user}</div></div>`; });
+  el.appendChild(al);
+  const sys=makeCard(`<div class="card-hd">⚙️ System Health</div>
+    <div class="li"><div class="li-l"><div class="li-ic">🖥️</div><div><div class="li-title">Server Uptime</div><div class="li-sub">Active-Active cluster</div></div></div>${tag('99.9%','green')}</div>
+    <div class="li"><div class="li-l"><div class="li-ic">💾</div><div><div class="li-title">Last Backup</div><div class="li-sub">Automated 02:00 AM</div></div></div>${tag('Today','green')}</div>
+    <div class="li"><div class="li-l"><div class="li-ic">🔒</div><div><div class="li-title">Security</div><div class="li-sub">Hashed passwords · Session tokens</div></div></div>${tag('Secure','green')}</div>`);
+  el.appendChild(sys);
+}
+
+function approveUser(id) {
+  if (!DB.pendingUsers) return;
+  const pu = DB.pendingUsers.find(u => u.id === id);
+  if (!pu) return;
+  // Move from pending to active users
+  DB.users.push({
+    id: pu.id, name: pu.name, email: pu.email,
+    role: pu.role, dept: pu.dept || pu.org,
+    status: 'Active', salt: pu.salt, pwHash: pu.pwHash,
+    mustChangePw: false, createdAt: new Date().toISOString(),
+    org: pu.org
+  });
+  pu.status = 'Approved';
+  saveDB(DB);
+  addAuditLog(`Access approved: ${pu.name} (${pu.role}) by ${currentUser.name}`);
+  navigate('admin');
+  toast(`✅ ${pu.name} approved — they can now sign in`);
+}
+
+function rejectUser(id) {
+  if (!DB.pendingUsers) return;
+  const pu = DB.pendingUsers.find(u => u.id === id);
+  if (!pu) return;
+  if (!confirm(`Reject access request from ${pu.name} (${pu.email})?`)) return;
+  pu.status = 'Rejected';
+  saveDB(DB);
+  addAuditLog(`Access rejected: ${pu.name} by ${currentUser.name}`);
+  navigate('admin');
+  toast(`Request from ${pu.name} rejected`);
+}
+
+function resetAll(){
+  if (!confirm('Reset ALL data to factory defaults? This CANNOT be undone.\n\nAll users, entries, and pickups will be permanently deleted.')) return;
+  try { localStorage.removeItem(LOCAL_KEY); } catch {}
+  DB=null; currentUser=null; clearSession();
+  fetch(FB_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  }).catch(() => {});
+  showScreen('setup');
+  toast('Data reset. Please set up the system again.');
+}
+
+function toggleUserStatus(id){
+  const u=DB.users.find(u=>u.id===id);
+  if(u){u.status=u.status==='Active'?'Inactive':'Active';saveDB(DB);addAuditLog(`User ${u.name} ${u.status}`);navigate('admin');toast(`User ${u.name} ${u.status}`);}
+}
+function openAddUser(){
+  document.getElementById('um-title').textContent='Add New User';
+  document.getElementById('um-id').value='';
+  document.getElementById('um-name').value='';
+  document.getElementById('um-email').value='';
+  document.getElementById('um-role').value='Staff';
+  document.getElementById('um-dept').value='';
+  document.getElementById('um-status').value='Active';
+  document.getElementById('um-pw').value='';
+  document.getElementById('um-pw-section').style.display='block';
+  document.getElementById('um-err').classList.remove('show');
+  openModal('overlay-user');
+}
+function openEditUser(id){
+  const u=DB.users.find(u=>u.id===id); if(!u)return;
+  document.getElementById('um-title').textContent='Edit User — '+u.name;
+  document.getElementById('um-id').value=u.id;
+  document.getElementById('um-name').value=u.name;
+  document.getElementById('um-email').value=u.email;
+  document.getElementById('um-role').value=u.role;
+  document.getElementById('um-dept').value=u.dept||'';
+  const umPhone=document.getElementById('um-phone'); if(umPhone) umPhone.value=u.phone||'';
+  document.getElementById('um-status').value=u.status;
+  document.getElementById('um-pw').value='';
+  document.getElementById('um-pw-section').style.display='block';
+  document.getElementById('um-err').classList.remove('show');
+  openModal('overlay-user');
+}
+function saveUser(){
+  const err=document.getElementById('um-err');
+  const name=document.getElementById('um-name').value.trim();
+  const email=document.getElementById('um-email').value.trim();
+  const pw=document.getElementById('um-pw').value;
+  const id=document.getElementById('um-id').value;
+  if(!name){showErr(err,'Name is required');return;}
+  if(!email||!email.includes('@')){showErr(err,'Valid email is required');return;}
+  // Check email unique
+  const existing=DB.users.find(u=>u.email.toLowerCase()===email.toLowerCase()&&String(u.id)!==String(id));
+  if(existing){showErr(err,'This email is already used by another user');return;}
+  if(!id){const suPwErr=validatePassword(pw);if(suPwErr){showErr(err,'⚠ '+suPwErr);return;}}
+  err.classList.remove('show');
+
+  if(id){
+    const u=DB.users.find(u=>u.id===Number(id));
+    if(u){
+      u.name=name;u.email=email;u.role=document.getElementById('um-role').value;
+      u.dept=document.getElementById('um-dept').value;u.status=document.getElementById('um-status').value;
+      const phoneEl=document.getElementById('um-phone');if(phoneEl)u.phone=phoneEl.value.trim();
+      if(pw.length>=8){const s=genSalt();u.salt=s;u.pwHash=hashPw(pw,s);u.mustChangePw=true;}
+      addAuditLog(`User updated: ${name}`);
+    }
+  } else {
+    const salt=genSalt();
+    DB.users.push({id:DB.nextId++,name,email,role:document.getElementById('um-role').value,dept:document.getElementById('um-dept').value,status:document.getElementById('um-status').value,salt,pwHash:hashPw(pw,salt),mustChangePw:true,createdAt:new Date().toISOString()});
+    addAuditLog(`User created: ${name} (${document.getElementById('um-role').value})`);
+  }
+  saveDB(DB);
+  closeModal('overlay-user');
+  navigate('admin');
+  toast(`✅ User ${name} saved. They can now log in with their email and password.`);
+}
+</script>
+</body></html>
